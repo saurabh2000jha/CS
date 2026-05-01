@@ -539,6 +539,23 @@ body {
 .btn-icon.del:hover { color: var(--red); border-color: rgba(255,90,101,0.3); }
 .btn-icon.print:hover { color: var(--amber); border-color: rgba(244,168,58,0.3); }
 
+/* Role-locked indicator for non-admin/manager users */
+.role-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  white-space: nowrap;
+  cursor: default;
+  letter-spacing: 0.3px;
+}
+
 /* DATA TABLE */
 .table-toolbar {
   display: flex;
@@ -1290,6 +1307,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div id="liveSyncBadge" title="Real-time sync active" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.25);font-size:11px;font-weight:700;color:#059669;letter-spacing:0.3px;cursor:default;">
           <span id="liveSyncDot" style="width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;animation:livePulse 2s infinite;"></span>
           LIVE SYNC
+        </div>
+        <div id="roleAccessBadge" title="Your access level" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;cursor:default;border:1px solid var(--border);background:var(--glass);color:var(--text-muted);">
+          <i class="fas fa-lock" style="font-size:10px"></i>
+          <span id="roleAccessLabel">View Only</span>
         </div>
         <div class="topbar-time" id="clockDisplay">--:--:--</div>
       </div>
@@ -2331,6 +2352,40 @@ const demoUsers = [
   { userId:'staff',   password:'staff123',   name:'Staff Member', role:'Staff'   },
 ];
 
+// ── ROLE-BASED ACCESS CONTROL ────────────────────────────────
+/**
+ * Returns true if the current user is allowed to edit or delete records.
+ * Only Admin and Manager roles have this permission.
+ */
+function canEditDelete() {
+  if (!currentUser) return false;
+  const role = (currentUser.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager';
+}
+
+/**
+ * Returns the action buttons HTML for a table row.
+ * If the user cannot edit/delete, shows a lock icon instead.
+ */
+function actionBtns(editFn, deleteFn) {
+  if (canEditDelete()) {
+    return `
+      <button class="btn-icon edit" onclick="${editFn}" title="Edit"><i class="fas fa-edit"></i></button>
+      <button class="btn-icon del"  onclick="${deleteFn}" title="Delete"><i class="fas fa-trash"></i></button>`;
+  }
+  return `<span class="role-locked" title="Only Admin or Manager can edit/delete"><i class="fas fa-lock"></i> View Only</span>`;
+}
+
+/**
+ * Guard function — call at the top of any delete/edit handler.
+ * Returns false and shows a toast if the user lacks permission.
+ */
+function requireEditRole() {
+  if (canEditDelete()) return true;
+  toast('⛔ Only Admin or Manager can edit or delete records.', 'error');
+  return false;
+}
+
 // ── CLOCK ────────────────────────────────────────────────────
 function startClock() {
   function tick() {
@@ -2398,6 +2453,25 @@ function startApp() {
   // Role-based visibility
   if (currentUser.role !== 'Admin') {
     document.getElementById('adminNav').style.display = 'none';
+  }
+
+  // Role access badge in topbar
+  const roleAccessBadge = document.getElementById('roleAccessBadge');
+  const roleAccessLabel = document.getElementById('roleAccessLabel');
+  if (canEditDelete()) {
+    roleAccessBadge.style.background = 'rgba(2,132,199,0.1)';
+    roleAccessBadge.style.borderColor = 'rgba(2,132,199,0.3)';
+    roleAccessBadge.style.color = 'var(--teal)';
+    roleAccessBadge.querySelector('i').className = 'fas fa-shield-alt';
+    roleAccessBadge.querySelector('i').style.fontSize = '10px';
+    roleAccessLabel.textContent = currentUser.role + ' Access';
+  } else {
+    roleAccessBadge.style.background = 'rgba(148,163,184,0.1)';
+    roleAccessBadge.style.borderColor = 'rgba(148,163,184,0.3)';
+    roleAccessBadge.style.color = 'var(--text-muted)';
+    roleAccessBadge.querySelector('i').className = 'fas fa-lock';
+    roleAccessBadge.querySelector('i').style.fontSize = '10px';
+    roleAccessLabel.textContent = 'View Only';
   }
 
   startClock();
@@ -2717,6 +2791,24 @@ function nowTime() {
   return new Date().toTimeString().slice(0,5);
 }
 
+// Safely format a time value that may be a bare "HH:MM", a full ISO string,
+// or a Google-Sheets serial-date ISO string like "1899-12-30T06:39:50.000Z"
+function formatTime(val) {
+  if (!val) return '—';
+  // Already a short HH:MM or HH:MM:SS string
+  if (/^\d{1,2}:\d{2}/.test(val)) return val.slice(0,5);
+  // ISO / datetime string — extract the UTC time portion
+  try {
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      const hh = String(d.getUTCHours()).padStart(2,'0');
+      const mm = String(d.getUTCMinutes()).padStart(2,'0');
+      return hh + ':' + mm;
+    }
+  } catch(e) {}
+  return val;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
   const res = await apiCall({ action:'getDashboard' });
@@ -2753,7 +2845,7 @@ async function loadDashboard() {
       <div class="activity-item">
         <div class="activity-dot ${(a.Type||'').toLowerCase()}"></div>
         <div class="activity-text"><strong>${a.Type}</strong> — ${a.Product} (×${a.Qty}) via ${a.Party||'—'}</div>
-        <div class="activity-time">${a.Date||''} ${a.Time||''}</div>
+        <div class="activity-time">${a.Date||''} ${formatTime(a.Time)}</div>
       </div>
     `).join('');
   }
@@ -2775,10 +2867,7 @@ async function loadInward() {
       <td>${formatCurrency(r.UnitCost)}</td>
       <td><strong>${formatCurrency(r.TotalCost)}</strong></td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>
-        <button class="btn-icon edit" onclick="editInward(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon del" onclick="deleteInward(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
-      </td>
+      <td>${actionBtns(`editInward(${r['SL.NO']})`, `deleteInward(${r['SL.NO']})`)}</td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No inward entries</p></div></td></tr>';
 }
@@ -2805,6 +2894,7 @@ function openInwardModal() {
 }
 
 function editInward(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.inward;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -2873,6 +2963,7 @@ async function submitInward() {
 }
 
 async function deleteInward(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this inward entry?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteInward', slNo });
@@ -2897,10 +2988,7 @@ async function loadOutward() {
       <td>${formatCurrency(r.UnitCost)}</td>
       <td><strong>${formatCurrency(r.TotalCost)}</strong></td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>
-        <button class="btn-icon edit" onclick="editOutward(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon del" onclick="deleteOutward(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
-      </td>
+      <td>${actionBtns(`editOutward(${r['SL.NO']})`, `deleteOutward(${r['SL.NO']})`)}</td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No outward entries</p></div></td></tr>';
 }
@@ -2912,6 +3000,7 @@ function calcOutwardTotal() {
 }
 
 function editOutward(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.outward;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -2978,6 +3067,7 @@ async function submitOutward() {
 }
 
 async function deleteOutward(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this outward entry?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteOutward', slNo });
@@ -3027,7 +3117,7 @@ async function loadStockMovement() {
     <tr>
       <td class="td-mono">${r['SL.NO']}</td>
       <td>${r.Date||'—'}</td>
-      <td class="td-mono">${r.Time||'—'}</td>
+      <td class="td-mono">${formatTime(r.Time)}</td>
       <td><span class="badge ${r.Type==='IN'?'badge-success':'badge-progress'}">${r.Type}</span></td>
       <td><strong>${r.Product||'—'}</strong></td>
       <td class="td-mono">${r.Qty||0}</td>
@@ -3052,15 +3142,15 @@ async function loadRepairs() {
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.Complaint||'—'}</td>
       <td>${badgeHtml(r.JobStatus)}</td>
       <td>
-        <button class="btn-icon edit" onclick="editRepair(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
+        ${actionBtns(`editRepair(${r['SL.NO']})`, `deleteRepair(${r['SL.NO']})`)}
         <button class="btn-icon print" onclick="printJobCard(${r['SL.NO']},'repair')" title="Print Job Card"><i class="fas fa-print"></i></button>
-        <button class="btn-icon del" onclick="deleteRepair(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
     </tr>
   `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tools"></i><p>No repair jobs</p></div></td></tr>';
 }
 
 function editRepair(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.repairs;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3149,6 +3239,7 @@ async function submitRepair() {
 }
 
 async function deleteRepair(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this repair job?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteRepair', slNo });
@@ -3221,9 +3312,8 @@ async function loadCustomOrders() {
       <td>${r.Qty}</td>
       <td>${badgeHtml(r.JobStatus)}</td>
       <td>
-        <button class="btn-icon edit" onclick="editCustomOrder(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
+        ${actionBtns(`editCustomOrder(${r['SL.NO']})`, `deleteCustomOrder(${r['SL.NO']})`)}
         <button class="btn-icon print" onclick="printJobCard(${r['SL.NO']},'custom')" title="Print"><i class="fas fa-print"></i></button>
-        <button class="btn-icon del" onclick="deleteCustomOrder(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
     </tr>
   `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No custom orders</p></div></td></tr>';
@@ -3236,6 +3326,7 @@ function calcCOTotal() {
 }
 
 function editCustomOrder(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.customOrders;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3306,6 +3397,7 @@ async function submitCustomOrder() {
 }
 
 async function deleteCustomOrder(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this order?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteCustomOrder', slNo });
@@ -3329,10 +3421,7 @@ async function loadWholesale() {
       <td>${formatCurrency(r.WSPrice)}</td>
       <td><strong>${formatCurrency(r.Total)}</strong></td>
       <td>${r.DiscountPercent||0}%</td>
-      <td>
-        <button class="btn-icon edit" onclick="editWholesale(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon del" onclick="deleteWholesale(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
-      </td>
+      <td>${actionBtns(`editWholesale(${r['SL.NO']})`, `deleteWholesale(${r['SL.NO']})`)}</td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-store"></i><p>No wholesale entries</p></div></td></tr>';
 }
@@ -3350,6 +3439,7 @@ function calcWSTotal() {
 }
 
 function editWholesale(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.wholesale;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3413,6 +3503,7 @@ async function submitWholesale() {
 }
 
 async function deleteWholesale(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this wholesale entry?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteWholesale', slNo });
@@ -3437,7 +3528,7 @@ async function loadPurchaseOrders() {
       <td style="font-size:12px;color:var(--text-muted)">${r.Remarks||'—'}</td>
       <td>
         <button class="btn-icon print" onclick="printPO(${r['SL.NO']})" title="Print PO"><i class="fas fa-print"></i></button>
-        <button class="btn-icon del" onclick="deletePurchaseOrder(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
+        ${canEditDelete() ? `<button class="btn-icon del" onclick="deletePurchaseOrder(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
   `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-file-invoice"></i><p>No purchase orders</p></div></td></tr>';
@@ -3480,6 +3571,7 @@ async function submitPurchaseOrder() {
 }
 
 async function deletePurchaseOrder(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this purchase order?')) return;
   showLoader();
   const res = await apiCall({ action:'deletePurchaseOrder', slNo });
@@ -3543,15 +3635,13 @@ async function loadSuppliers() {
       <td>${r.Email||'—'}</td>
       <td>${r.City||'—'}</td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>
-        <button class="btn-icon edit" onclick="editSupplier(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
-        <button class="btn-icon del" onclick="deleteSupplier(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
-      </td>
+      <td>${actionBtns(`editSupplier(${r['SL.NO']})`, `deleteSupplier(${r['SL.NO']})`)}</td>
     </tr>
   `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-industry"></i><p>No suppliers added</p></div></td></tr>';
 }
 
 function editSupplier(slNo) {
+  if (!requireEditRole()) return;
   const all = demoData.suppliers;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3599,6 +3689,7 @@ async function submitSupplier() {
 }
 
 async function deleteSupplier(slNo) {
+  if (!requireEditRole()) return;
   if (!confirm('Delete this supplier?')) return;
   showLoader();
   const res = await apiCall({ action:'deleteSupplier', slNo });
@@ -3622,7 +3713,7 @@ async function loadUsers() {
       <td>${badgeHtml(r.Status)}</td>
       <td style="font-size:11px;color:var(--text-muted)">${r.LastLogin||'Never'}</td>
       <td>
-        <button class="btn-icon del" onclick="deleteUser(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
+        ${canEditDelete() ? `<button class="btn-icon del" onclick="deleteUser(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
   `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-users"></i><p>No users</p></div></td></tr>';
@@ -3657,6 +3748,7 @@ async function submitUser() {
 }
 
 async function deleteUser(slNo) {
+  if (!requireEditRole()) return;
   if (currentUser && currentUser.userId === 'admin' && slNo === 1) {
     toast('Cannot delete the primary admin account!', 'error'); return;
   }
@@ -4170,6 +4262,17 @@ document.addEventListener('keydown', e => {
         document.getElementById('userAvatar').textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
         if (currentUser.role !== 'Admin') {
           document.getElementById('adminNav').style.display = 'none';
+        }
+        // Restore role access badge
+        const rBadge = document.getElementById('roleAccessBadge');
+        const rLabel = document.getElementById('roleAccessLabel');
+        const isPriv = ['admin','manager'].includes((currentUser.role||'').toLowerCase());
+        if (rBadge && rLabel) {
+          rBadge.style.background = isPriv ? 'rgba(2,132,199,0.1)' : 'rgba(148,163,184,0.1)';
+          rBadge.style.borderColor = isPriv ? 'rgba(2,132,199,0.3)' : 'rgba(148,163,184,0.3)';
+          rBadge.style.color = isPriv ? 'var(--teal)' : 'var(--text-muted)';
+          rBadge.querySelector('i').className = isPriv ? 'fas fa-shield-alt' : 'fas fa-lock';
+          rLabel.textContent = isPriv ? currentUser.role + ' Access' : 'View Only';
         }
         startClock();
         navTo('dashboard');
