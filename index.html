@@ -539,23 +539,6 @@ body {
 .btn-icon.del:hover { color: var(--red); border-color: rgba(255,90,101,0.3); }
 .btn-icon.print:hover { color: var(--amber); border-color: rgba(244,168,58,0.3); }
 
-/* Role-locked indicator for non-admin/manager users */
-.role-locked {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  background: var(--glass);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  white-space: nowrap;
-  cursor: default;
-  letter-spacing: 0.3px;
-}
-
 /* DATA TABLE */
 .table-toolbar {
   display: flex;
@@ -1308,10 +1291,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <span id="liveSyncDot" style="width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;animation:livePulse 2s infinite;"></span>
           LIVE SYNC
         </div>
-        <div id="roleAccessBadge" title="Your access level" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;cursor:default;border:1px solid var(--border);background:var(--glass);color:var(--text-muted);">
-          <i class="fas fa-lock" style="font-size:10px"></i>
-          <span id="roleAccessLabel">View Only</span>
-        </div>
         <div class="topbar-time" id="clockDisplay">--:--:--</div>
       </div>
     </div>
@@ -1994,7 +1973,7 @@ function jsonResponse(obj) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="in_date"></div>
-        <div class="form-group"><label class="form-label">Time</label><input type="time" class="form-control" id="in_time"></div>
+        <div class="form-group"><label class="form-label">Time</label><input type="text" class="form-control" id="in_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Invoice / Challan No</label><input class="form-control" id="in_invoice" placeholder="INV-001"></div>
         <div class="form-group"><label class="form-label">Type of Product *</label>
           <select class="form-control" id="in_type">
@@ -2038,7 +2017,7 @@ function jsonResponse(obj) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="out_date"></div>
-        <div class="form-group"><label class="form-label">Time</label><input type="time" class="form-control" id="out_time"></div>
+        <div class="form-group"><label class="form-label">Time</label><input type="text" class="form-control" id="out_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Invoice / Challan No</label><input class="form-control" id="out_invoice" placeholder="INV-001"></div>
         <div class="form-group"><label class="form-label">Type of Product</label>
           <select class="form-control" id="out_type">
@@ -2081,7 +2060,7 @@ function jsonResponse(obj) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Received Date *</label><input type="date" class="form-control" id="rep_date"></div>
-        <div class="form-group"><label class="form-label">Received Time</label><input type="time" class="form-control" id="rep_time"></div>
+        <div class="form-group"><label class="form-label">Received Time</label><input type="text" class="form-control" id="rep_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Job Status</label>
           <select class="form-control" id="rep_status">
             <option>Pending</option><option>In Progress</option><option>Sent to Company</option>
@@ -2119,7 +2098,7 @@ function jsonResponse(obj) {
         <div class="form-group"><label class="form-label">Sent Through</label><input class="form-control" id="rep_sentthrough" placeholder="Courier / Hand"></div>
         <div class="form-group"><label class="form-label">Receiver Details / AWB No</label><input class="form-control" id="rep_awb" placeholder="AWB or receiver name"></div>
         <div class="form-group"><label class="form-label">Company Estimate (₹)</label><input type="number" class="form-control" id="rep_coestimate" min="0"></div>
-        <div class="form-group"><label class="form-label">CS Estimate (₹)</label><input type="number" class="form-control" id="rep_csestimate" min="0"></div>
+        <div class="form-group"><label class="form-label">Aditional Cost (₹)</label><input type="number" class="form-control" id="rep_csestimate" min="0"></div>
         <div class="form-group"><label class="form-label">Estimate Status</label>
           <select class="form-control" id="rep_estimatestatus">
             <option>Pending</option><option>Approved</option><option>Rejected</option><option>Revised</option>
@@ -2154,7 +2133,7 @@ function jsonResponse(obj) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Received Date *</label><input type="date" class="form-control" id="co_date"></div>
-        <div class="form-group"><label class="form-label">Received Time</label><input type="time" class="form-control" id="co_time"></div>
+        <div class="form-group"><label class="form-label">Received Time</label><input type="text" class="form-control" id="co_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Job Status</label>
           <select class="form-control" id="co_status">
             <option>Received</option><option>Processing</option><option>Ready</option>
@@ -2351,7 +2330,6 @@ const demoUsers = [
   { userId:'manager', password:'manager123', name:'Manager One',  role:'Manager' },
   { userId:'staff',   password:'staff123',   name:'Staff Member', role:'Staff'   },
 ];
-
 // ── ROLE-BASED ACCESS CONTROL ────────────────────────────────
 /**
  * Returns true if the current user is allowed to edit or delete records.
@@ -2390,7 +2368,13 @@ function requireEditRole() {
 function startClock() {
   function tick() {
     const now = new Date();
-    document.getElementById('clockDisplay').textContent = now.toLocaleTimeString('en-IN');
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yyyy = now.getFullYear();
+    let h = now.getHours(), min = String(now.getMinutes()).padStart(2,'0');
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    document.getElementById('clockDisplay').textContent = dd+'/'+mm+'/'+yyyy+' '+String(h).padStart(2,'0')+':'+min+' '+ampm;
   }
   tick();
   setInterval(tick, 1000);
@@ -2453,25 +2437,6 @@ function startApp() {
   // Role-based visibility
   if (currentUser.role !== 'Admin') {
     document.getElementById('adminNav').style.display = 'none';
-  }
-
-  // Role access badge in topbar
-  const roleAccessBadge = document.getElementById('roleAccessBadge');
-  const roleAccessLabel = document.getElementById('roleAccessLabel');
-  if (canEditDelete()) {
-    roleAccessBadge.style.background = 'rgba(2,132,199,0.1)';
-    roleAccessBadge.style.borderColor = 'rgba(2,132,199,0.3)';
-    roleAccessBadge.style.color = 'var(--teal)';
-    roleAccessBadge.querySelector('i').className = 'fas fa-shield-alt';
-    roleAccessBadge.querySelector('i').style.fontSize = '10px';
-    roleAccessLabel.textContent = currentUser.role + ' Access';
-  } else {
-    roleAccessBadge.style.background = 'rgba(148,163,184,0.1)';
-    roleAccessBadge.style.borderColor = 'rgba(148,163,184,0.3)';
-    roleAccessBadge.style.color = 'var(--text-muted)';
-    roleAccessBadge.querySelector('i').className = 'fas fa-lock';
-    roleAccessBadge.querySelector('i').style.fontSize = '10px';
-    roleAccessLabel.textContent = 'View Only';
   }
 
   startClock();
@@ -2581,7 +2546,7 @@ function demoApiCall(params) {
     const activeOrders = demoData.customOrders.filter(o => !['Delivered','Cancelled'].includes(o.JobStatus)).length;
     const totalStock = demoData.stock.reduce((s,r) => s + (parseInt(r.CurrentStock)||0), 0);
     const lowStockCount = demoData.stock.filter(r => parseInt(r.CurrentStock) <= parseInt(r.LowStockAlert)).length;
-    const today = new Date().toLocaleDateString('en-IN');
+    const today = fmtDate();
     const inwardToday = demoData.inward.filter(r => r.Date === today).reduce((s,r) => s+(parseInt(r.Qty)||0), 0);
     const outwardToday = demoData.outward.filter(r => r.Date === today).reduce((s,r) => s+(parseInt(r.Qty)||0), 0);
     const months = ['Nov','Dec','Jan','Feb','Mar','Apr'];
@@ -2607,7 +2572,7 @@ function demoApiCall(params) {
     demoData.inward.push(d);
     const prod = demoData.stock.find(s => s.ProductName === d.ProductName);
     if (prod) { prod.CurrentStock += parseInt(d.Qty)||0; prod.TotalInward += parseInt(d.Qty)||0; }
-    else demoData.stock.push({ ProductName:d.ProductName, ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: new Date().toLocaleDateString('en-IN') });
+    else demoData.stock.push({ ProductName:d.ProductName, ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: fmtDate() });
     demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'IN', Product:d.ProductName, Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo });
     saveDb(demoData);
     return { success:true };
@@ -2763,7 +2728,7 @@ function exportCSV(tableId, name) {
   const blob = new Blob([csv], { type:'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${name}_${new Date().toLocaleDateString('en-IN').replace(/\//g,'-')}.csv`;
+  a.download = `${name}_${fmtDate().replace(/\//g,'-')}.csv`;
   a.click();
 }
 
@@ -2787,27 +2752,60 @@ function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
-function nowTime() {
-  return new Date().toTimeString().slice(0,5);
+function fmtDate(d) {
+  const dt = d ? new Date(d) : new Date();
+  const dd = String(dt.getDate()).padStart(2,'0');
+  const mm = String(dt.getMonth()+1).padStart(2,'0');
+  return dd+'/'+mm+'/'+dt.getFullYear();
 }
 
-// Safely format a time value that may be a bare "HH:MM", a full ISO string,
-// or a Google-Sheets serial-date ISO string like "1899-12-30T06:39:50.000Z"
-function formatTime(val) {
-  if (!val) return '—';
-  // Already a short HH:MM or HH:MM:SS string
-  if (/^\d{1,2}:\d{2}/.test(val)) return val.slice(0,5);
-  // ISO / datetime string — extract the UTC time portion
-  try {
-    const d = new Date(val);
-    if (!isNaN(d)) {
-      const hh = String(d.getUTCHours()).padStart(2,'0');
-      const mm = String(d.getUTCMinutes()).padStart(2,'0');
-      return hh + ':' + mm;
-    }
-  } catch(e) {}
-  return val;
+function fmtDateTime(d) {
+  const dt = d ? new Date(d) : new Date();
+  let h = dt.getHours(), min = String(dt.getMinutes()).padStart(2,'0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return fmtDate(dt)+', '+String(h).padStart(2,'0')+':'+min+' '+ampm;
 }
+
+function nowTime() {
+  const now = new Date();
+  let h = now.getHours(), min = String(now.getMinutes()).padStart(2,'0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return String(h).padStart(2,'0') + ':' + min + ' ' + ampm;
+}
+
+// ── TIME INPUT MASK ───────────────────────────────────────────
+// Attaches live formatting to all time text inputs so they show HH:MM am/pm
+function attachTimeMask(el) {
+  if (!el) return;
+  el.addEventListener('input', function() {
+    let v = this.value.replace(/[^0-9apm\s:]/gi,'').toLowerCase();
+    // Auto-insert colon after 2 digits
+    if (/^\d{3}/.test(v.replace(/\D/g,''))) {
+      const digits = v.replace(/\D/g,'');
+      v = digits.slice(0,2) + ':' + digits.slice(2,4);
+    }
+    this.value = v;
+  });
+  el.addEventListener('blur', function() {
+    // Normalise on blur: parse and reformat
+    const match = this.value.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+    if (match) {
+      let h = parseInt(match[1]), min = match[2];
+      let ampm = (match[3]||'').toLowerCase() || (h>=12?'pm':'am');
+      if (h>12) { ampm='pm'; h=h-12; }
+      if (h===0) h=12;
+      this.value = String(h).padStart(2,'0')+':'+min+' '+ampm;
+    }
+  });
+}
+
+(function() {
+  // Attach after DOM ready (called once, on page load)
+  const ids = ['in_time','out_time','rep_time','co_time'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) attachTimeMask(el); });
+})();
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
@@ -2845,7 +2843,7 @@ async function loadDashboard() {
       <div class="activity-item">
         <div class="activity-dot ${(a.Type||'').toLowerCase()}"></div>
         <div class="activity-text"><strong>${a.Type}</strong> — ${a.Product} (×${a.Qty}) via ${a.Party||'—'}</div>
-        <div class="activity-time">${a.Date||''} ${formatTime(a.Time)}</div>
+        <div class="activity-time">${a.Date||''} ${a.Time||''}</div>
       </div>
     `).join('');
   }
@@ -2867,7 +2865,9 @@ async function loadInward() {
       <td>${formatCurrency(r.UnitCost)}</td>
       <td><strong>${formatCurrency(r.TotalCost)}</strong></td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>${actionBtns(`editInward(${r['SL.NO']})`, `deleteInward(${r['SL.NO']})`)}</td>
+      <td>
+        ${actionBtns(`editInward(${r['SL.NO']})`, `deleteInward(${r['SL.NO']})`)}
+      </td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No inward entries</p></div></td></tr>';
 }
@@ -2894,7 +2894,6 @@ function openInwardModal() {
 }
 
 function editInward(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.inward;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -2927,7 +2926,7 @@ async function submitInward() {
   if (!date || !product || !qty || !supplier) { toast('Please fill required fields (*)', 'error'); return; }
 
   const data = {
-    Date: new Date(date).toLocaleDateString('en-IN'),
+    Date: fmtDate(date),
     Time: document.getElementById('in_time').value,
     InvoiceNo: document.getElementById('in_invoice').value,
     TypeOfProduct: document.getElementById('in_type').value,
@@ -2988,7 +2987,9 @@ async function loadOutward() {
       <td>${formatCurrency(r.UnitCost)}</td>
       <td><strong>${formatCurrency(r.TotalCost)}</strong></td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>${actionBtns(`editOutward(${r['SL.NO']})`, `deleteOutward(${r['SL.NO']})`)}</td>
+      <td>
+        ${actionBtns(`editOutward(${r['SL.NO']})`, `deleteOutward(${r['SL.NO']})`)}
+      </td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No outward entries</p></div></td></tr>';
 }
@@ -3000,7 +3001,6 @@ function calcOutwardTotal() {
 }
 
 function editOutward(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.outward;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3032,7 +3032,7 @@ async function submitOutward() {
   if (!date || !product || !qty || !supplier) { toast('Please fill required fields (*)', 'error'); return; }
 
   const data = {
-    Date: new Date(date).toLocaleDateString('en-IN'),
+    Date: fmtDate(date),
     Time: document.getElementById('out_time').value,
     InvoiceNo: document.getElementById('out_invoice').value,
     TypeOfProduct: document.getElementById('out_type').value,
@@ -3044,7 +3044,7 @@ async function submitOutward() {
     ReceiverName: document.getElementById('out_receiver').value,
     AWBNoMobileNo: document.getElementById('out_awb').value,
     Status: document.getElementById('out_status').value,
-    DeliveryDate: (() => { const d = document.getElementById('out_deliverydate').value; return d ? new Date(d).toLocaleDateString('en-IN') : ''; })()
+    DeliveryDate: (() => { const d = document.getElementById('out_deliverydate').value; return d ? fmtDate(d) : ''; })()
   };
 
   showLoader();
@@ -3117,7 +3117,7 @@ async function loadStockMovement() {
     <tr>
       <td class="td-mono">${r['SL.NO']}</td>
       <td>${r.Date||'—'}</td>
-      <td class="td-mono">${formatTime(r.Time)}</td>
+      <td class="td-mono">${r.Time||'—'}</td>
       <td><span class="badge ${r.Type==='IN'?'badge-success':'badge-progress'}">${r.Type}</span></td>
       <td><strong>${r.Product||'—'}</strong></td>
       <td class="td-mono">${r.Qty||0}</td>
@@ -3142,15 +3142,15 @@ async function loadRepairs() {
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.Complaint||'—'}</td>
       <td>${badgeHtml(r.JobStatus)}</td>
       <td>
-        ${actionBtns(`editRepair(${r['SL.NO']})`, `deleteRepair(${r['SL.NO']})`)}
+        ${canEditDelete() ? `<button class="btn-icon edit" onclick="editRepair(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
         <button class="btn-icon print" onclick="printJobCard(${r['SL.NO']},'repair')" title="Print Job Card"><i class="fas fa-print"></i></button>
+        ${canEditDelete() ? `<button class="btn-icon del" onclick="deleteRepair(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can edit/delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
   `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tools"></i><p>No repair jobs</p></div></td></tr>';
 }
 
 function editRepair(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.repairs;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3192,7 +3192,7 @@ async function submitRepair() {
   if (!date || !patient || !phone || !complaint) { toast('Fill required fields (*)', 'error'); return; }
 
   const data = {
-    ReceivedDate: new Date(date).toLocaleDateString('en-IN'),
+    ReceivedDate: fmtDate(date),
     ReceivedTime: document.getElementById('rep_time').value,
     JobStatus: document.getElementById('rep_status').value,
     CompanyName: document.getElementById('rep_company').value,
@@ -3214,7 +3214,7 @@ async function submitRepair() {
     PersonName: document.getElementById('rep_person').value,
     TypeOfRepair: document.getElementById('rep_repairtype').value,
     ReplacedDeviceDetails: document.getElementById('rep_replaced').value,
-    ReceivedDateReturn: (() => { const d = document.getElementById('rep_returndate').value; return d ? new Date(d).toLocaleDateString('en-IN') : ''; })(),
+    ReceivedDateReturn: (() => { const d = document.getElementById('rep_returndate').value; return d ? fmtDate(d) : ''; })(),
     Remarks: document.getElementById('rep_remarks').value
   };
 
@@ -3312,8 +3312,9 @@ async function loadCustomOrders() {
       <td>${r.Qty}</td>
       <td>${badgeHtml(r.JobStatus)}</td>
       <td>
-        ${actionBtns(`editCustomOrder(${r['SL.NO']})`, `deleteCustomOrder(${r['SL.NO']})`)}
+        ${canEditDelete() ? `<button class="btn-icon edit" onclick="editCustomOrder(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
         <button class="btn-icon print" onclick="printJobCard(${r['SL.NO']},'custom')" title="Print"><i class="fas fa-print"></i></button>
+        ${canEditDelete() ? `<button class="btn-icon del" onclick="deleteCustomOrder(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can edit/delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
   `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No custom orders</p></div></td></tr>';
@@ -3326,7 +3327,6 @@ function calcCOTotal() {
 }
 
 function editCustomOrder(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.customOrders;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3359,7 +3359,7 @@ async function submitCustomOrder() {
   if (!date || !patient || !phone) { toast('Fill required fields (*)', 'error'); return; }
 
   const data = {
-    ReceivedDate: new Date(date).toLocaleDateString('en-IN'),
+    ReceivedDate: fmtDate(date),
     ReceivedTime: document.getElementById('co_time').value,
     JobStatus: document.getElementById('co_status').value,
     CompanyName: document.getElementById('co_company').value,
@@ -3373,7 +3373,7 @@ async function submitCustomOrder() {
     TotalCost: parseFloat(document.getElementById('co_total').value)||0,
     DiscountPercent: parseFloat(document.getElementById('co_discount').value)||0,
     OrderStatus: document.getElementById('co_orderstatus').value,
-    ReturnReceivedDate: (() => { const d = document.getElementById('co_returndate').value; return d ? new Date(d).toLocaleDateString('en-IN') : ''; })(),
+    ReturnReceivedDate: (() => { const d = document.getElementById('co_returndate').value; return d ? fmtDate(d) : ''; })(),
     Remarks: document.getElementById('co_remarks').value
   };
 
@@ -3421,7 +3421,9 @@ async function loadWholesale() {
       <td>${formatCurrency(r.WSPrice)}</td>
       <td><strong>${formatCurrency(r.Total)}</strong></td>
       <td>${r.DiscountPercent||0}%</td>
-      <td>${actionBtns(`editWholesale(${r['SL.NO']})`, `deleteWholesale(${r['SL.NO']})`)}</td>
+      <td>
+        ${actionBtns(`editWholesale(${r['SL.NO']})`, `deleteWholesale(${r['SL.NO']})`)}
+      </td>
     </tr>
   `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-store"></i><p>No wholesale entries</p></div></td></tr>';
 }
@@ -3439,7 +3441,6 @@ function calcWSTotal() {
 }
 
 function editWholesale(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.wholesale;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3467,7 +3468,7 @@ async function submitWholesale() {
   if (!date || !dealer) { toast('Fill required fields (*)', 'error'); return; }
 
   const data = {
-    Date: new Date(date).toLocaleDateString('en-IN'),
+    Date: fmtDate(date),
     DealerName: dealer,
     ContactPerson: document.getElementById('ws_contact').value,
     Product: document.getElementById('ws_product').value,
@@ -3547,7 +3548,7 @@ async function submitPurchaseOrder() {
   if (!date || !supplier || !product) { toast('Fill required fields (*)', 'error'); return; }
 
   const data = {
-    DateOfPurchase: new Date(date).toLocaleDateString('en-IN'),
+    DateOfPurchase: fmtDate(date),
     SupplierName: supplier,
     ContactPerson: document.getElementById('po_contact').value,
     ProductDescription: product,
@@ -3635,13 +3636,14 @@ async function loadSuppliers() {
       <td>${r.Email||'—'}</td>
       <td>${r.City||'—'}</td>
       <td>${badgeHtml(r.Status)}</td>
-      <td>${actionBtns(`editSupplier(${r['SL.NO']})`, `deleteSupplier(${r['SL.NO']})`)}</td>
+      <td>
+        ${actionBtns(`editSupplier(${r['SL.NO']})`, `deleteSupplier(${r['SL.NO']})`)}
+      </td>
     </tr>
   `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-industry"></i><p>No suppliers added</p></div></td></tr>';
 }
 
 function editSupplier(slNo) {
-  if (!requireEditRole()) return;
   const all = demoData.suppliers;
   const r = all.find(x => String(x['SL.NO']) === String(slNo));
   if (!r) return;
@@ -3865,7 +3867,7 @@ async function saveSettings() {
       const result = await resp.json();
       hideLoader();
       if (result.success) {
-        const now = new Date().toLocaleString('en-IN');
+        const now = fmtDateTime();
         localStorage.setItem('clearsound_gs_lastsync', now);
         const el = document.getElementById('gsLastSync');
         if (el) el.textContent = now;
@@ -4073,7 +4075,7 @@ async function pushToSheets() {
     });
     const data = await resp.json();
     if (data.success) {
-      const now = new Date().toLocaleString('en-IN');
+      const now = fmtDateTime();
       localStorage.setItem('clearsound_gs_lastsync', now);
       document.getElementById('gsLastSync').textContent = now;
       cfg.connected = true;
@@ -4108,7 +4110,7 @@ async function pullFromSheets() {
       Object.assign(demoData, rest);
       saveDb(demoData);
 
-      const now = new Date().toLocaleString('en-IN');
+      const now = fmtDateTime();
       localStorage.setItem('clearsound_gs_lastsync', now);
       const syncEl = document.getElementById('gsLastSync');
       if (syncEl) syncEl.textContent = now;
@@ -4159,7 +4161,7 @@ async function syncActionToSheets(params) {
   const resp = await fetch(cfg.url, { method:'POST', body, headers:{ 'Content-Type':'text/plain' } });
   const result = await resp.json();
   if (result.success) {
-    const now = new Date().toLocaleString('en-IN');
+    const now = fmtDateTime();
     localStorage.setItem('clearsound_gs_lastsync', now);
     const el = document.getElementById('gsLastSync');
     if (el) el.textContent = now;
@@ -4262,17 +4264,6 @@ document.addEventListener('keydown', e => {
         document.getElementById('userAvatar').textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
         if (currentUser.role !== 'Admin') {
           document.getElementById('adminNav').style.display = 'none';
-        }
-        // Restore role access badge
-        const rBadge = document.getElementById('roleAccessBadge');
-        const rLabel = document.getElementById('roleAccessLabel');
-        const isPriv = ['admin','manager'].includes((currentUser.role||'').toLowerCase());
-        if (rBadge && rLabel) {
-          rBadge.style.background = isPriv ? 'rgba(2,132,199,0.1)' : 'rgba(148,163,184,0.1)';
-          rBadge.style.borderColor = isPriv ? 'rgba(2,132,199,0.3)' : 'rgba(148,163,184,0.3)';
-          rBadge.style.color = isPriv ? 'var(--teal)' : 'var(--text-muted)';
-          rBadge.querySelector('i').className = isPriv ? 'fas fa-shield-alt' : 'fas fa-lock';
-          rLabel.textContent = isPriv ? currentUser.role + ' Access' : 'View Only';
         }
         startClock();
         navTo('dashboard');
