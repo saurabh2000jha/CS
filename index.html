@@ -1287,7 +1287,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       </button>
       <div class="topbar-title" id="pageTitle">Dashboard</div>
       <div class="topbar-actions">
-        <div id="liveSyncBadge" title="Real-time sync active" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.25);font-size:11px;font-weight:700;color:#059669;letter-spacing:0.3px;cursor:default;">
+        <div id="liveSyncBadge" title="Auto-syncing every 5 seconds with Google Sheets" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.25);font-size:11px;font-weight:700;color:#059669;letter-spacing:0.3px;cursor:default;">
           <span id="liveSyncDot" style="width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;animation:livePulse 2s infinite;"></span>
           LIVE SYNC
         </div>
@@ -1444,9 +1444,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <table id="stockTable">
               <thead>
                 <tr>
-                  <th>Product</th><th>Type</th><th>Supplier</th>
+                  <th>#</th><th>Product</th><th>Type</th><th>Supplier</th>
                   <th>Current Stock</th><th>Total In</th><th>Total Out</th>
-                  <th>Alert Level</th><th>Last Updated</th>
+                  <th>Alert Level</th><th>Last Updated</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="stockBody"></tbody>
@@ -1460,6 +1460,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fas fa-exchange-alt"></i> Stock Movement Log</div>
+            <button class="btn btn-secondary" onclick="exportCSV('movementTable','StockMovement')">
+              <i class="fas fa-download"></i> Export
+            </button>
           </div>
           <div class="table-toolbar">
             <div class="search-wrap">
@@ -2047,6 +2050,27 @@ function doPost(e) {
       return jsonResponse({ success: false, error: 'Row not found — SL.NO ' + slNo + ' in sheet: ' + tab });
     }
 
+    // ── OVERWRITE SINGLE TAB ─────────────────────────────────────────────────
+    // Used for stock and stockMovement which are computed/derived tables.
+    // Overwrites the named sheet with fresh data in plain-text format.
+    if (action === 'overwriteTab') {
+      var tab   = params.tab;
+      var data  = params.data;
+      if (!tab || !Array.isArray(data)) return jsonResponse({ success: false, error: 'Missing tab or data' });
+      var sheet = getOrCreateSheet(ss, tab);
+      sheet.clearContents();
+      if (!data.length) return jsonResponse({ success: true });
+      var keys = Object.keys(data[0]);
+      sheet.getRange(1, 1, 1, keys.length).setValues([keys]);
+      var rows = data.map(function(r) {
+        return keys.map(function(k) { return sanitiseForWrite(r[k]); });
+      });
+      var range = sheet.getRange(2, 1, rows.length, keys.length);
+      range.setNumberFormat('@STRING@');
+      range.setValues(rows);
+      return jsonResponse({ success: true });
+    }
+
     // ── DELETE ROW ────────────────────────────────────────────────────────
     if (action === 'deleteRow') {
       var tab  = params.tab;
@@ -2435,14 +2459,15 @@ function jsonResponse(obj) {
 <div class="modal-overlay" id="userModal">
   <div class="modal">
     <div class="modal-header">
-      <h3><i class="fas fa-user-plus"></i> User Account</h3>
+      <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Add User</h3>
       <button class="btn-close" onclick="closeModal('userModal')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="usr_slno">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Full Name *</label><input class="form-control" id="usr_name" placeholder="Full name"></div>
         <div class="form-group"><label class="form-label">User ID *</label><input class="form-control" id="usr_userid" placeholder="Unique user ID"></div>
-        <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-control" id="usr_password" placeholder="Password"></div>
+        <div class="form-group" id="usr_pass_group"><label class="form-label">Password *</label><input type="password" class="form-control" id="usr_password" placeholder="Password (leave blank to keep existing)"></div>
         <div class="form-group"><label class="form-label">Role *</label>
           <select class="form-control" id="usr_role">
             <option>Staff</option><option>Manager</option><option>Admin</option>
@@ -2460,6 +2485,32 @@ function jsonResponse(obj) {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('userModal')">Cancel</button>
       <button class="btn btn-primary" onclick="submitUser()"><i class="fas fa-save"></i> Save User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stock Edit Alert Modal -->
+<div class="modal-overlay" id="stockAlertModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3><i class="fas fa-exclamation-triangle" style="color:var(--amber)"></i> Edit Stock Alert Level</h3>
+      <button class="btn-close" onclick="closeModal('stockAlertModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sal_product">
+      <div class="form-group">
+        <label class="form-label">Product</label>
+        <input class="form-control" id="sal_product_display" readonly style="background:var(--glass)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Low Stock Alert Level *</label>
+        <input type="number" class="form-control" id="sal_alert" min="0" placeholder="e.g. 5">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">Warning shown when stock falls to or below this number</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('stockAlertModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitStockAlert()"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
 </div>
@@ -2587,16 +2638,43 @@ async function handleLogin() {
     showError('Please enter User ID and Password', errEl); return;
   }
 
-  // 1. Check localStorage/DB users first
+  // ── FIX: On a new/different device localStorage is empty.
+  // Always attempt to pull the latest users from Google Sheets before
+  // validating credentials, so real accounts work on any device.
+  const cfg = getGsConfig();
+  if (cfg && cfg.url) {
+    errEl.textContent = 'Connecting…';
+    errEl.style.display = 'block';
+    try {
+      const resp = await fetch(cfg.url, {
+        method : 'POST',
+        body   : JSON.stringify({ action: 'pullAll' }),
+        headers: { 'Content-Type': 'text/plain' }
+      });
+      const data = await resp.json();
+      if (data.success && data.db) {
+        const normDb = normalisePulledDb(data.db);
+        if (normDb.settings) Object.assign(demoData.settings, normDb.settings);
+        const { settings: _s, ...rest } = normDb;
+        Object.assign(demoData, rest);
+        saveDb(demoData);
+      }
+    } catch (fetchErr) {
+      console.warn('[Login] Could not reach Google Sheets, using local data:', fetchErr.message);
+    }
+    errEl.style.display = 'none';
+  }
+
+  // 1. Check localStorage/DB users (now refreshed from Sheets if reachable)
   const dbState = loadDb();
   const dbUsers = dbState.users || [];
   const dbUser = dbUsers.find(u => u.UserID === userId && (u.Password === password || u.Password === '••••••'));
 
-  // 2. Check built-in demoUsers array (always available, no localStorage needed)
-  const demoUser = demoUsers.find(u => u.userId === userId && u.password === password);
-
-  // 3. Check demoData.users (the in-memory seeded users like 'admin')
+  // 2. Check in-memory demoData.users (may also be freshly pulled from Sheets)
   const seededUser = (demoData.users || []).find(u => u.UserID === userId && u.Password === password);
+
+  // 3. Check built-in demoUsers array (always available, no Sheets needed)
+  const demoUser = demoUsers.find(u => u.userId === userId && u.password === password);
 
   if (dbUser && dbUser.Status === 'Active') {
     currentUser = { userId: dbUser.UserID, name: dbUser.FullName, role: dbUser.Role };
@@ -2638,11 +2716,7 @@ function startApp() {
 
   startClock();
   navTo('dashboard');
-
-  // ── AUTO-PULL FROM GOOGLE SHEETS ON LOGIN ─────────────────────────────
-  // Always fetch the latest data from Sheets when the user logs in.
-  // This ensures any device always shows up-to-date records without needing
-  // a manual Pull. Falls back to local data silently if Sheets is unreachable.
+  // Pull fresh data from Sheets on login, then start background polling
   autoSyncOnLogin();
 }
 
@@ -2679,10 +2753,12 @@ async function autoSyncOnLogin() {
   } finally {
     hideLoader();
     loadDashboard();
+    startLiveSync();   // begin background polling after first pull
   }
 }
 
 function handleLogout() {
+  stopLiveSync();
   currentUser = null;
   sessionStorage.removeItem('clearsound_session');
   document.getElementById('appShell').style.display = 'none';
@@ -2693,6 +2769,158 @@ function handleLogout() {
 
 // ── REFRESH CURRENT PAGE (replaces location.reload) ─────────
 // Re-renders whatever page is currently active without losing the session.
+// ═══════════════════════════════════════════════════════════════
+//  LIVE SYNC ENGINE
+//  Every SYNC_INTERVAL ms:
+//   1. Fetch ALL data from Google Sheets (background, no loader)
+//   2. Compute a lightweight hash of the response
+//   3. If hash changed → update demoData + refresh current page silently
+//   4. Push: every add/edit/delete already calls syncActionToSheets()
+//            which writes to Sheets immediately in the background
+// ═══════════════════════════════════════════════════════════════
+
+const SYNC_INTERVAL = 5000;    // push + pull every 5 seconds
+let   _syncTimer    = null;
+let   _lastHash     = '';
+let   _syncPaused   = false;   // pause during user form input to avoid overwriting edits
+let   _syncRunning  = false;   // prevent overlapping sync calls
+
+/** Simple fast hash — stringify + sum char codes */
+function quickHash(obj) {
+  const s = JSON.stringify(obj);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/** Update the live sync badge colour/state */
+function setSyncBadgeState(state) {
+  const dot   = document.getElementById('liveSyncDot');
+  const badge = document.getElementById('liveSyncBadge');
+  if (!dot || !badge) return;
+  if (state === 'syncing') {
+    dot.style.background = '#f59e0b';
+  } else if (state === 'error') {
+    dot.style.background = '#ef4444';
+  } else {
+    dot.style.background = '#059669';
+    badge.classList.remove('sync-flash');
+    void badge.offsetWidth;
+    badge.classList.add('sync-flash');
+  }
+}
+
+/** Start the background polling loop — runs immediately then every 5 s */
+function startLiveSync() {
+  if (_syncTimer) clearInterval(_syncTimer);
+  backgroundSync();                                    // fire immediately on login/restore
+  _syncTimer = setInterval(backgroundSync, SYNC_INTERVAL);
+  console.log('[LiveSync] Started — push+pull every', SYNC_INTERVAL / 1000, 'seconds');
+}
+
+/** Stop polling (called on logout) */
+function stopLiveSync() {
+  if (_syncTimer) { clearInterval(_syncTimer); _syncTimer = null; }
+  _syncRunning = false;
+}
+
+/**
+ * backgroundSync — every 5 seconds (push THEN pull):
+ *   1. PUSH the full local DB to Google Sheets  — writes this device's changes
+ *   2. PULL all data back from Google Sheets    — receives changes from other devices
+ * Skipped if a modal is open or a previous sync cycle is still in flight.
+ */
+async function backgroundSync() {
+  if (_syncPaused || _syncRunning) return;
+  const cfg = getGsConfig();
+  if (!cfg || !cfg.url) return;
+
+  _syncRunning = true;
+  setSyncBadgeState('syncing');
+
+  try {
+    // ── STEP 1: PUSH ──────────────────────────────────────────
+    const pushResp = await fetch(cfg.url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'pushAll', db: demoData })
+    });
+    const pushResult = await pushResp.json();
+    if (!pushResult.success) {
+      console.warn('[LiveSync] Push returned failure:', pushResult.error);
+    }
+  } catch (pushErr) {
+    console.warn('[LiveSync] Push failed:', pushErr.message);
+    setSyncBadgeState('error');
+    _syncRunning = false;
+    return;
+  }
+
+  // ── STEP 2: PULL ──────────────────────────────────────────
+  await backgroundPull();
+  _syncRunning = false;
+}
+
+/**
+ * backgroundPull — silently fetches ALL data from Google Sheets.
+ * Only updates demoData and refreshes the UI if something actually changed.
+ * Never shows a loader or blocks the user.
+ */
+async function backgroundPull() {
+  if (_syncPaused) return;                    // user has a modal open — skip
+  const cfg = getGsConfig();
+  if (!cfg || !cfg.url) return;
+
+  try {
+    const resp = await fetch(cfg.url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'pullAll' })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.success || !data.db) return;
+
+    const hash = quickHash(data.db);
+    if (hash === _lastHash) return;          // nothing changed — skip UI update
+    _lastHash = hash;
+
+    // Normalise all dates/times from Sheets format
+    const normDb = normalisePulledDb(data.db);
+
+    // Merge into demoData — keep settings deep-merged
+    if (normDb.settings) Object.assign(demoData.settings, normDb.settings);
+    const { settings: _s, ...rest } = normDb;
+    Object.assign(demoData, rest);
+    saveDb(demoData);
+
+    // Update last-sync timestamp display
+    const now = fmtDateTime();
+    localStorage.setItem('clearsound_gs_lastsync', now);
+    const syncEl = document.getElementById('gsLastSync');
+    if (syncEl) syncEl.textContent = now;
+
+    // Update badge to green + flash
+    setSyncBadgeState('ok');
+
+    // Silently refresh whichever page the user is currently on
+    refreshCurrentPage();
+    console.log('[LiveSync] Data updated from Sheets at', now);
+
+  } catch (err) {
+    // Network error — ignore silently, will retry on next interval
+    console.warn('[LiveSync] Background pull failed:', err.message);
+    setSyncBadgeState('error');
+  }
+}
+
+/**
+ * Pause background sync while a modal is open (prevents data from
+ * overwriting form fields the user is currently editing).
+ */
+function pauseLiveSync()  { _syncPaused = true;  }
+function resumeLiveSync() { _syncPaused = false; }
+
 function refreshCurrentPage() {
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
@@ -2809,8 +3037,8 @@ function demoApiCall(params) {
     d['SL.NO'] = demoData.inward.length + 1;
     demoData.inward.push(d);
     const prod = demoData.stock.find(s => s.ProductName === d.ProductName);
-    if (prod) { prod.CurrentStock += parseInt(d.Qty)||0; prod.TotalInward += parseInt(d.Qty)||0; }
-    else demoData.stock.push({ ProductName:d.ProductName, ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: fmtDate() });
+    if (prod) { prod.CurrentStock = (parseInt(prod.CurrentStock)||0) + (parseInt(d.Qty)||0); prod.TotalInward = (parseInt(prod.TotalInward)||0) + (parseInt(d.Qty)||0); prod.LastUpdated = fmtDate(); }
+    else demoData.stock.push({ 'SL.NO': demoData.stock.length+1, ProductName:d.ProductName, ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: fmtDate() });
     demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'IN', Product:d.ProductName, Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo });
     saveDb(demoData);
     return { success:true };
@@ -2822,7 +3050,7 @@ function demoApiCall(params) {
     if (prod && qty > parseInt(prod.CurrentStock)) return { success:false, error:`Insufficient stock. Available: ${prod.CurrentStock}` };
     d['SL.NO'] = demoData.outward.length + 1;
     demoData.outward.push(d);
-    if (prod) { prod.CurrentStock -= qty; prod.TotalOutward += qty; }
+    if (prod) { prod.CurrentStock = (parseInt(prod.CurrentStock)||0) - qty; prod.TotalOutward = (parseInt(prod.TotalOutward)||0) + qty; prod.LastUpdated = fmtDate(); }
     demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo });
     saveDb(demoData);
     return { success:true };
@@ -2864,9 +3092,21 @@ function demoApiCall(params) {
   }
   if (action === 'addUser') {
     const d = params.data;
-    d['SL.NO'] = demoData.users.length + 1;
-    d.Password = '••••••';
+    // Check duplicate UserID
+    if (demoData.users.find(u => u.UserID === d.UserID)) return { success:false, error:'User ID already exists' };
+    d['SL.NO'] = (demoData.users.length > 0 ? Math.max(...demoData.users.map(u=>parseInt(u['SL.NO'])||0)) : 0) + 1;
+    // Store password as-is (Apps Script encrypts on Sheets side via setNumberFormat plain text)
     demoData.users.push(d);
+    saveDb(demoData);
+    return { success:true };
+  }
+  if (action === 'updateUser') {
+    const d = params.data;
+    const idx = demoData.users.findIndex(u => String(u['SL.NO']) === String(d['SL.NO']));
+    if (idx === -1) return { success:false, error:'User not found' };
+    // Don't overwrite password if blank
+    if (!d.Password) d.Password = demoData.users[idx].Password;
+    demoData.users[idx] = { ...demoData.users[idx], ...d };
     saveDb(demoData);
     return { success:true };
   }
@@ -2885,6 +3125,10 @@ function demoApiCall(params) {
   if (deleteMap[action]) {
     const key = deleteMap[action];
     demoData[key] = demoData[key].filter(r => String(r['SL.NO']) !== String(params.slNo));
+    // Renumber SL.NO after delete to keep them sequential
+    demoData[key].forEach((r, i) => r['SL.NO'] = i + 1);
+    // After any inward/outward delete, recalculate stock levels
+    if (key === 'inward' || key === 'outward') recalcStock();
     saveDb(demoData);
     return { success:true };
   }
@@ -2899,11 +3143,50 @@ function demoApiCall(params) {
     const key = updateMap[action];
     const idx = demoData[key].findIndex(r => String(r['SL.NO']) === String(params.data['SL.NO']));
     if (idx !== -1) demoData[key][idx] = { ...demoData[key][idx], ...params.data };
+    // After any inward/outward edit, recalculate stock levels from scratch
+    if (key === 'inward' || key === 'outward') recalcStock();
     saveDb(demoData);
     return { success:true };
   }
 
   return { success:false, error:'Unknown action' };
+}
+
+/**
+ * recalcStock — rebuilds demoData.stock and demoData.stockMovement
+ * completely from demoData.inward and demoData.outward.
+ * Called after any inward/outward add, edit, or delete.
+ */
+function recalcStock() {
+  const stockMap = {};
+  // Process all inward entries
+  demoData.inward.forEach(d => {
+    const name = d.ProductName;
+    if (!name) return;
+    if (!stockMap[name]) stockMap[name] = { ProductName:name, ProductType:d.TypeOfProduct||'', Supplier:d.SupplierName||'', CurrentStock:0, TotalInward:0, TotalOutward:0, LowStockAlert:5, LastUpdated:d.Date||'' };
+    stockMap[name].TotalInward  += parseInt(d.Qty)||0;
+    stockMap[name].CurrentStock += parseInt(d.Qty)||0;
+    if (d.Date > stockMap[name].LastUpdated) stockMap[name].LastUpdated = d.Date;
+  });
+  // Process all outward entries
+  demoData.outward.forEach(d => {
+    const name = d.ProductName;
+    if (!name) return;
+    if (!stockMap[name]) stockMap[name] = { ProductName:name, ProductType:d.TypeOfProduct||'', Supplier:'', CurrentStock:0, TotalInward:0, TotalOutward:0, LowStockAlert:5, LastUpdated:d.Date||'' };
+    stockMap[name].TotalOutward  += parseInt(d.Qty)||0;
+    stockMap[name].CurrentStock  -= parseInt(d.Qty)||0;
+    if (d.Date > stockMap[name].LastUpdated) stockMap[name].LastUpdated = d.Date;
+  });
+  // Preserve existing LowStockAlert values
+  demoData.stock.forEach(s => { if (stockMap[s.ProductName]) stockMap[s.ProductName].LowStockAlert = s.LowStockAlert || 5; });
+  // Rebuild stock array
+  demoData.stock = Object.values(stockMap).map((s, i) => ({ 'SL.NO': i+1, ...s }));
+  // Rebuild stockMovement from inward+outward in date order
+  const movements = [
+    ...demoData.inward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'IN',  Product:d.ProductName, Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo })),
+    ...demoData.outward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo }))
+  ].sort((a,b) => (a.Date||'').localeCompare(b.Date||'') || (a.Time||'').localeCompare(b.Time||''));
+  demoData.stockMovement = movements.map((m, i) => ({ 'SL.NO': i+1, ...m }));
 }
 
 // ── LOADER ────────────────────────────────────────────────────
@@ -2922,11 +3205,13 @@ function toast(msg, type='info') {
 
 // ── MODAL ─────────────────────────────────────────────────────
 function openModal(id) {
+  pauseLiveSync();
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   editingId = null;
+  resumeLiveSync();
 }
 
 // Close on overlay click
@@ -3026,7 +3311,7 @@ function toInputDate(v) {
 }
 
 function normalisePulledDb(db) {
-  const DF={'inward':['Date'],'outward':['Date','DeliveryDate'],'repairs':['ReceivedDate','ReceivedDateReturn'],'customOrders':['ReceivedDate','ReturnReceivedDate'],'wholesale':['Date'],'purchaseOrders':['DateOfPurchase','OrderDate','ExpectedDate','ReceivedDate'],'stockMovement':['Date']};
+  const DF={'inward':['Date'],'outward':['Date','DeliveryDate'],'repairs':['ReceivedDate','ReceivedDateReturn'],'customOrders':['ReceivedDate','ReturnReceivedDate'],'wholesale':['Date'],'purchaseOrders':['DateOfPurchase','OrderDate','ExpectedDate','ReceivedDate'],'stockMovement':['Date'],'stock':['LastUpdated']};
   Object.entries(DF).forEach(([tab,fields])=>{
     if (!Array.isArray(db[tab])) return;
     db[tab].forEach(row=>{
@@ -3367,41 +3652,72 @@ async function loadStock() {
   const res = await apiCall({ action:'getStock' });
   if (!res.success) return;
   const tbody = document.getElementById('stockBody');
-  tbody.innerHTML = res.data.length ? res.data.map(r => {
-    const current = parseInt(r.CurrentStock)||0;
-    const alert   = parseInt(r.LowStockAlert)||5;
-    const lowClass = current <= alert ? 'stock-low' : 'stock-ok';
+  tbody.innerHTML = res.data.length ? res.data.map((r,i) => {
+    const current  = parseInt(r.CurrentStock)||0;
+    const alertLvl = parseInt(r.LowStockAlert)||5;
+    const lowClass = current <= alertLvl ? 'stock-low' : 'stock-ok';
+    const prodEsc  = (r.ProductName||'').replace(/'/g,"\'");
     return `
       <tr>
-        <td><strong>${r.ProductName}</strong></td>
+        <td class="td-mono">${i+1}</td>
+        <td><strong>${r.ProductName||'—'}</strong></td>
         <td>${r.ProductType||'—'}</td>
         <td>${r.Supplier||'—'}</td>
-        <td class="${lowClass}" style="font-size:16px;font-family:'DM Mono',monospace">${current} ${current <= alert ? '⚠️' : ''}</td>
+        <td class="${lowClass}" style="font-size:15px;font-family:'DM Mono',monospace;font-weight:700">${current} ${current <= alertLvl ? '⚠️' : ''}</td>
         <td class="td-mono">${r.TotalInward||0}</td>
         <td class="td-mono">${r.TotalOutward||0}</td>
-        <td>${alert}</td>
+        <td class="td-mono">${alertLvl}</td>
         <td style="font-size:11px;color:var(--text-muted)">${r.LastUpdated||'—'}</td>
+        <td>
+          ${canEditDelete()?`<button class="btn-icon edit" onclick="openStockAlertModal('${prodEsc}')" title="Edit Alert Level"><i class="fas fa-edit"></i></button>`:''}
+        </td>
       </tr>
     `;
-  }).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-boxes"></i><p>No stock data</p></div></td></tr>';
+  }).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-boxes"></i><p>No stock data. Add items via Inward.</p></div></td></tr>';
+}
+
+function openStockAlertModal(productName) {
+  const s = demoData.stock.find(r => r.ProductName === productName);
+  if (!s) return;
+  document.getElementById('sal_product').value         = productName;
+  document.getElementById('sal_product_display').value = productName;
+  document.getElementById('sal_alert').value           = s.LowStockAlert || 5;
+  openModal('stockAlertModal');
+}
+
+async function submitStockAlert() {
+  const product = document.getElementById('sal_product').value;
+  const alert   = parseInt(document.getElementById('sal_alert').value);
+  if (!product || isNaN(alert) || alert < 0) { toast('Enter a valid alert level', 'error'); return; }
+  const s = demoData.stock.find(r => r.ProductName === product);
+  if (!s) { toast('Product not found', 'error'); return; }
+  s.LowStockAlert = alert;
+  s.LastUpdated   = fmtDate();
+  saveDb(demoData);
+  // Sync stock tab to Sheets
+  syncAllStockToSheets();
+  toast('Alert level updated!', 'success');
+  closeModal('stockAlertModal');
+  loadStock();
 }
 
 async function loadStockMovement() {
   const res = await apiCall({ action:'getStockMovement' });
   if (!res.success) return;
   const tbody = document.getElementById('movementBody');
-  tbody.innerHTML = res.data.length ? [...res.data].reverse().map(r => `
+  const rows  = [...(res.data||[])].reverse();
+  tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td class="td-mono">${r['SL.NO']}</td>
+      <td class="td-mono">${r['SL.NO']||'—'}</td>
       <td>${r.Date||'—'}</td>
       <td class="td-mono">${r.Time||'—'}</td>
-      <td><span class="badge ${r.Type==='IN'?'badge-success':'badge-progress'}">${r.Type}</span></td>
+      <td><span class="badge ${r.Type==='IN'?'badge-success':'badge-danger'}">${r.Type||'—'}</span></td>
       <td><strong>${r.Product||'—'}</strong></td>
-      <td class="td-mono">${r.Qty||0}</td>
+      <td class="td-mono" style="font-weight:700">${r.Qty||0}</td>
       <td>${r.Party||'—'}</td>
       <td class="td-mono">${r.Reference||'—'}</td>
     </tr>
-  `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exchange-alt"></i><p>No movements</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exchange-alt"></i><p>No stock movements yet. Add Inward / Outward entries to see movement log.</p></div></td></tr>';
 }
 
 // ── REPAIRS ───────────────────────────────────────────────────
@@ -3992,36 +4308,76 @@ async function loadUsers() {
       <td>${badgeHtml(r.Status)}</td>
       <td style="font-size:11px;color:var(--text-muted)">${r.LastLogin||'Never'}</td>
       <td>
-        ${canEditDelete() ? `<button class="btn-icon del" onclick="deleteUser(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can delete"><i class="fas fa-lock"></i></span>`}
+        ${canEditDelete() ? `
+          <button class="btn-icon edit" onclick="editUser(${r['SL.NO']})" title="Edit"><i class="fas fa-edit"></i></button>
+          <button class="btn-icon del"  onclick="deleteUser(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>
+        ` : `<span class="role-locked" title="Only Admin or Manager can edit/delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
   `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-users"></i><p>No users</p></div></td></tr>';
+}
+
+function editUser(slNo) {
+  const r = demoData.users.find(x => String(x['SL.NO']) === String(slNo));
+  if (!r) return;
+  editingId = slNo;
+  document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-edit"></i> Edit User';
+  document.getElementById('usr_slno').value    = slNo;
+  document.getElementById('usr_name').value    = r.FullName||'';
+  document.getElementById('usr_userid').value  = r.UserID||'';
+  document.getElementById('usr_password').value= '';  // blank = keep existing
+  document.getElementById('usr_password').placeholder = 'Leave blank to keep existing password';
+  document.getElementById('usr_role').value    = r.Role||'Staff';
+  document.getElementById('usr_email').value   = r.Email||'';
+  document.getElementById('usr_phone').value   = r.Phone||'';
+  document.getElementById('usr_status').value  = r.Status||'Active';
+  openModal('userModal');
 }
 
 async function submitUser() {
   const name   = document.getElementById('usr_name').value.trim();
   const userid = document.getElementById('usr_userid').value.trim();
   const pass   = document.getElementById('usr_password').value;
-  if (!name || !userid || !pass) { toast('Name, User ID and Password are required', 'error'); return; }
+  const slNo   = document.getElementById('usr_slno').value;
+  const isEdit = !!slNo;
+
+  if (!name || !userid) { toast('Name and User ID are required', 'error'); return; }
+  if (!isEdit && !pass)  { toast('Password is required for new users', 'error'); return; }
 
   const data = {
-    FullName: name, UserID: userid, Password: pass,
-    Role: document.getElementById('usr_role').value,
-    Email: document.getElementById('usr_email').value,
-    Phone: document.getElementById('usr_phone').value,
+    FullName: name, UserID: userid,
+    Role:   document.getElementById('usr_role').value,
+    Email:  document.getElementById('usr_email').value,
+    Phone:  document.getElementById('usr_phone').value,
     Status: document.getElementById('usr_status').value,
-    LastLogin: ''
   };
+
+  if (isEdit) {
+    data['SL.NO'] = slNo;
+    // Only update password if user entered a new one
+    const existing = demoData.users.find(u => String(u['SL.NO']) === String(slNo));
+    data.Password  = pass || (existing ? existing.Password : '');
+    data.LastLogin = existing ? existing.LastLogin : '';
+  } else {
+    data.Password  = pass;
+    data.LastLogin = '';
+  }
 
   showLoader();
   try {
-    const res = await apiCall({ action:'addUser', data });
+    const action = isEdit ? 'updateUser' : 'addUser';
+    const res = await apiCall({ action, data });
     if (res.success) {
-      toast('User created!', 'success');
+      toast(isEdit ? 'User updated!' : 'User created!', 'success');
       closeModal('userModal');
+      // Reset modal for next Add
+      document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Add User';
+      document.getElementById('usr_slno').value = '';
+      document.getElementById('usr_password').placeholder = 'Password';
+      editingId = null;
       loadUsers();
     } else {
-      toast(res.error || 'Error creating user', 'error');
+      toast(res.error || 'Error saving user', 'error');
     }
   } finally { hideLoader(); }
 }
@@ -4206,10 +4562,15 @@ function saveDb(state) {
 // Every write goes to localStorage immediately (for instant UI),
 // then fires to the live API in the background (fire-and-forget).
 async function apiCall(params) {
-  const result = await demoApiCall(params); // 1. Write locally first — UI stays fast
-  syncActionToSheets(params).catch(e => {   // 2. Push to live API in background
-    console.warn('[AutoSync] API push failed silently:', e);
-  });
+  const result = await demoApiCall(params);     // 1. Write locally first — UI stays fast
+  if (result.success) {
+    syncActionToSheets(params).then(() => {     // 2. Push to Sheets in background
+      // 3. After push, reset hash so next poll sees the fresh state
+      _lastHash = '';
+    }).catch(e => {
+      console.warn('[AutoSync] API push failed silently:', e);
+    });
+  }
   return result;
 }
 
@@ -4311,15 +4672,28 @@ async function syncActionToSheets(params) {
   if (!cfg.url || !cfg.connected) return;
 
   const tabMap = {
-    addInward:'inward', addOutward:'outward', addRepair:'repairs', addCustomOrder:'customOrders',
-    addWholesale:'wholesale', addPurchaseOrder:'purchaseOrders', addSupplier:'suppliers', addUser:'users',
-    updateInward:'inward', updateOutward:'outward', updateRepair:'repairs', updateCustomOrder:'customOrders',
-    updateWholesale:'wholesale', updatePurchaseOrder:'purchaseOrders', updateSupplier:'suppliers', updateUser:'users',
-    deleteInward:'inward', deleteOutward:'outward', deleteRepair:'repairs', deleteCustomOrder:'customOrders',
-    deleteWholesale:'wholesale', deletePurchaseOrder:'purchaseOrders', deleteSupplier:'suppliers', deleteUser:'users',
+    addInward:'inward',       addOutward:'outward',         addRepair:'repairs',
+    addCustomOrder:'customOrders', addWholesale:'wholesale', addPurchaseOrder:'purchaseOrders',
+    addSupplier:'suppliers',  addUser:'users',
+    updateInward:'inward',    updateOutward:'outward',       updateRepair:'repairs',
+    updateCustomOrder:'customOrders', updateWholesale:'wholesale', updatePurchaseOrder:'purchaseOrders',
+    updateSupplier:'suppliers', updateUser:'users',
+    deleteInward:'inward',    deleteOutward:'outward',       deleteRepair:'repairs',
+    deleteCustomOrder:'customOrders', deleteWholesale:'wholesale', deletePurchaseOrder:'purchaseOrders',
+    deleteSupplier:'suppliers', deleteUser:'users',
   };
 
   const { action } = params;
+
+  // Stock and StockMovement are written as full-table syncs (not row-by-row)
+  // because they are computed/derived from inward+outward, not direct user entries.
+  if (action === 'addInward' || action === 'addOutward' ||
+      action === 'updateInward' || action === 'updateOutward' ||
+      action === 'deleteInward' || action === 'deleteOutward') {
+    // After inward/outward, sync both stock and stockMovement full tables
+    setTimeout(() => syncAllStockToSheets(), 0);
+  }
+
   const tab = tabMap[action];
   if (!tab) return;  // dashboard/getters — skip
 
@@ -4350,6 +4724,36 @@ async function syncActionToSheets(params) {
       badge.classList.add('sync-flash');
     }
   }
+}
+
+// Push full stock + stockMovement tables to Sheets (called after any inward/outward change)
+async function syncAllStockToSheets() {
+  const cfg = getGsConfig();
+  if (!cfg || !cfg.url) return;
+  // Sync stock and stockMovement by sending each tab as appendRow/updateRow is complex
+  // for computed data — instead we use a lightweight per-tab overwrite action
+  const tabs = ['stock', 'stockMovement'];
+  const tabData = { stock: demoData.stock, stockMovement: demoData.stockMovement };
+  for (const tab of tabs) {
+    const data = tabData[tab];
+    if (!data || !data.length) continue;
+    try {
+      const resp = await fetch(cfg.url, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'overwriteTab', tab, data })
+      });
+      const result = await resp.json();
+      if (!result.success) console.warn('[StockSync] overwriteTab failed for', tab, result.error);
+    } catch(e) {
+      console.warn('[StockSync]', tab, e.message);
+    }
+  }
+  const now = fmtDateTime();
+  localStorage.setItem('clearsound_gs_lastsync', now);
+  const el = document.getElementById('gsLastSync');
+  if (el) el.textContent = now;
+  const badge = document.getElementById('liveSyncBadge');
+  if (badge) { badge.classList.remove('sync-flash'); void badge.offsetWidth; badge.classList.add('sync-flash'); }
 }
 
 function toggleGuide() {
@@ -4444,7 +4848,7 @@ document.addEventListener('keydown', e => {
         }
         startClock();
         navTo('dashboard');
-        autoSyncOnLogin(); // Auto-pull on session restore too
+        autoSyncOnLogin(); // Auto-pull on session restore + starts live sync
       } catch(se) {
         sessionStorage.removeItem('clearsound_session');
       }
