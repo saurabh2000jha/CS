@@ -1152,6 +1152,66 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   100% { background: rgba(5,150,105,0.1); }
 }
 .sync-flash { animation: syncFlash 0.9s ease; }
+
+/* ═══════════════════════════════════════════════════════════
+   PRODUCT AUTOCOMPLETE
+═══════════════════════════════════════════════════════════ */
+.autocomplete-wrap { position: relative; }
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--navy-card);
+  border: 1px solid var(--border-teal);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 500;
+  max-height: 240px;
+  overflow-y: auto;
+  display: none;
+}
+.autocomplete-dropdown.open { display: block; }
+
+.ac-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.12s;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item.highlighted { background: var(--teal-glow); color: var(--teal); }
+.ac-item-name { font-weight: 600; }
+.ac-item-cat {
+  font-size: 10px; color: var(--text-dim);
+  background: var(--glass); padding: 2px 7px;
+  border-radius: 10px; border: 1px solid var(--border); flex-shrink: 0;
+}
+.ac-add-new {
+  padding: 10px 14px; cursor: pointer; font-size: 13px;
+  color: var(--teal); font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  border-top: 1px solid var(--border);
+  background: rgba(2,132,199,0.04);
+}
+.ac-add-new:hover { background: var(--teal-glow); }
+.ac-no-results { padding: 10px 14px; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+/* Product Master Badges */
+.pm-cat-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+.pm-cat-Hearing-Aid    { background: rgba(2,132,199,0.12); color: var(--teal); }
+.pm-cat-Accessories    { background: rgba(124,58,237,0.12); color: var(--purple); }
+.pm-cat-Receiver       { background: rgba(5,150,105,0.12); color: var(--green); }
+.pm-cat-Ear-Mould      { background: rgba(217,119,6,0.12); color: var(--amber); }
+.pm-cat-Others         { background: rgba(100,116,139,0.12); color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -1378,7 +1438,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <thead>
                 <tr>
                   <th>#</th><th>Date</th><th>Invoice No</th><th>Product</th>
-                  <th>Supplier</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th>
+                  <th>Brand</th><th>Supplier</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th>
                   <th>Status</th><th>Actions</th>
                 </tr>
               </thead>
@@ -1394,7 +1454,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fas fa-arrow-circle-up"></i> Outward Entries</div>
-            <button class="btn btn-primary" onclick="openModal('outwardModal')">
+            <button class="btn btn-primary" onclick="openOutwardModal()">
               <i class="fas fa-plus"></i> Add Entry
             </button>
           </div>
@@ -1412,7 +1472,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <thead>
                 <tr>
                   <th>#</th><th>Date</th><th>Invoice No</th><th>Product</th>
-                  <th>Receiver</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th>
+                  <th>Brand</th><th>Receiver</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th>
                   <th>Status</th><th>Actions</th>
                 </tr>
               </thead>
@@ -1444,7 +1504,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <table id="stockTable">
               <thead>
                 <tr>
-                  <th>#</th><th>Product</th><th>Type</th><th>Supplier</th>
+                  <th>#</th><th>Product</th><th>Brand</th><th>Type</th><th>Supplier</th>
                   <th>Current Stock</th><th>Total In</th><th>Total Out</th>
                   <th>Alert Level</th><th>Last Updated</th><th>Actions</th>
                 </tr>
@@ -1473,7 +1533,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <div class="table-wrap">
             <table id="movementTable">
               <thead>
-                <tr><th>#</th><th>Date</th><th>Time</th><th>Type</th><th>Product</th><th>Qty</th><th>Party</th><th>Reference</th></tr>
+                <tr><th>#</th><th>Date</th><th>Time</th><th>Type</th><th>Product</th><th>Brand</th><th>Qty</th><th>Party</th><th>Reference</th></tr>
               </thead>
               <tbody id="movementBody"></tbody>
             </table>
@@ -1574,7 +1634,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <thead>
                 <tr>
                   <th>#</th><th>Date</th><th>Supplier</th><th>Product</th>
-                  <th>Qty</th><th>Unit ₹</th><th>Total ₹</th><th>Remarks</th><th>Actions</th>
+                  <th>Brand</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th><th>Remarks</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="purchaseOrderBody"></tbody>
@@ -1596,7 +1656,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             <table id="supplierTable">
               <thead>
                 <tr>
-                  <th>#</th><th>Supplier Name</th><th>Contact Person</th>
+                  <th>#</th><th>Supplier Name</th><th>Brand Name</th><th>Contact Person</th>
                   <th>Phone</th><th>Email</th><th>City</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
@@ -1639,6 +1699,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           </button>
           <button class="settings-tab" id="stab-gsheets" onclick="switchSettingsTab('gsheets')">
             <i class="fas fa-table"></i> Google Sheets
+          </button>
+          <button class="settings-tab" id="stab-products" onclick="switchSettingsTab('products')">
+            <i class="fas fa-boxes"></i> Product Master
           </button>
         </div>
 
@@ -2154,6 +2217,63 @@ function jsonResponse(obj) {
 
         </div>
 
+        <!-- Tab: Product Master -->
+        <div id="stab-content-products" class="settings-tab-content" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-boxes"></i> Product Master Management</div>
+              <button class="btn btn-primary" onclick="openAddProductModal()">
+                <i class="fas fa-plus"></i> Add Product
+              </button>
+            </div>
+            <!-- Add/Filter toolbar -->
+            <div class="table-toolbar" style="margin-bottom:16px">
+              <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input class="search-input" id="pmSearch" placeholder="Search products..." oninput="renderProductMasterTable()">
+              </div>
+              <select class="form-control" id="pmCategoryFilter" style="width:200px" onchange="renderProductMasterTable()">
+                <option value="">All Categories</option>
+                <option>Hearing Aid</option>
+                <option>Accessories</option>
+                <option>Receiver</option>
+                <option>Ear Mould</option>
+                <option>Others</option>
+              </select>
+            </div>
+            <!-- Category summary pills -->
+            <div id="pmCategorySummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+            <!-- Products Table -->
+            <div class="table-wrap">
+              <table id="productMasterTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Product Name</th>
+                    <th>Brand Name</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="productMasterBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-cog"></i> Product Entry Settings</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-main)">
+                <input type="checkbox" id="allowCustomEntry" onchange="saveProductSettings()" style="width:16px;height:16px;accent-color:var(--teal)">
+                Allow custom/manual product name entry in forms (if product not found in master)
+              </label>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:8px">When disabled, users must select a product from the master list or use "Add New Product" from the autocomplete.</p>
+          </div>
+        </div>
+
       </div><!-- end page-settings -->
 
     </div><!-- end page-content -->
@@ -2164,6 +2284,85 @@ function jsonResponse(obj) {
 <!-- ═══════════════════════════════════════════════════════════
      MODALS
 ═══════════════════════════════════════════════════════════ -->
+
+<!-- PRODUCT MASTER MODAL -->
+<div class="modal-overlay" id="productMasterModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3><i class="fas fa-box"></i> <span id="pmModalTitle">Add Product</span></h3>
+      <button class="btn-close" onclick="closeModal('productMasterModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Product Name *</label>
+          <input class="form-control" id="pm_name" placeholder="Enter product name">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Brand Name</label>
+          <input class="form-control" id="pm_brand" placeholder="e.g. Phonak, Signia, Oticon, Widex">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Category *</label>
+          <select class="form-control" id="pm_category">
+            <option value="">Select category</option>
+            <option>Hearing Aid</option>
+            <option>Accessories</option>
+            <option>Receiver</option>
+            <option>Ear Mould</option>
+            <option>Others</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="pm_description" rows="2" placeholder="Optional description"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('productMasterModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProductMaster()"><i class="fas fa-save"></i> Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ADD PRODUCT MODAL (from autocomplete) -->
+<div class="modal-overlay" id="quickAddProductModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3><i class="fas fa-plus-circle"></i> Add New Product to Master</h3>
+      <button class="btn-close" onclick="closeModal('quickAddProductModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">This product will be saved to the Product Master and auto-filled in the form.</p>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Product Name *</label>
+          <input class="form-control" id="qap_name" placeholder="Enter product name">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Brand Name</label>
+          <input class="form-control" id="qap_brand" placeholder="e.g. Phonak, Signia, Oticon">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Category *</label>
+          <select class="form-control" id="qap_category">
+            <option value="">Select category</option>
+            <option>Hearing Aid</option>
+            <option>Accessories</option>
+            <option>Receiver</option>
+            <option>Ear Mould</option>
+            <option>Others</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('quickAddProductModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveQuickAddProduct()"><i class="fas fa-plus"></i> Add &amp; Use Product</button>
+    </div>
+  </div>
+</div>
 
 <!-- INWARD MODAL -->
 <div class="modal-overlay" id="inwardModal">
@@ -2178,14 +2377,20 @@ function jsonResponse(obj) {
         <div class="form-group"><label class="form-label">Time</label><input type="text" class="form-control" id="in_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Invoice / Challan No</label><input class="form-control" id="in_invoice" placeholder="INV-001"></div>
         <div class="form-group"><label class="form-label">Type of Product *</label>
-          <select class="form-control" id="in_type">
+          <select class="form-control" id="in_type" onchange="acClearAndHint('in_product','in_product_dd','in_type')">
             <option value="">Select type</option>
             <option>Hearing Aid</option><option>Accessories</option>
-            <option>Battery</option><option>Ear Mould</option><option>Other</option>
+            <option>Receiver</option><option>Ear Mould</option><option>Others</option>
           </select>
         </div>
         <div class="form-group"><label class="form-label">Supplier / Company *</label><input class="form-control" id="in_supplier" placeholder="Supplier name"></div>
-        <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="in_product" placeholder="Product name"></div>
+        <div class="form-group"><label class="form-label">Brand Name</label><input class="form-control" id="in_brand" placeholder="e.g. Phonak, Signia, Oticon"></div>
+        <div class="form-group"><label class="form-label">Product Name *</label>
+          <div class="autocomplete-wrap">
+            <input class="form-control" id="in_product" placeholder="Select a type first, then search…" autocomplete="off" oninput="acInput(this,'in_product_dd','in_product','in_type')" onkeydown="acKeyNav(event,'in_product_dd','in_product')" onfocus="acInput(this,'in_product_dd','in_product','in_type')">
+            <div class="autocomplete-dropdown" id="in_product_dd"></div>
+          </div>
+        </div>
         <div class="form-group"><label class="form-label">Qty *</label><input type="number" class="form-control" id="in_qty" min="1" oninput="calcInwardTotal()"></div>
         <div class="form-group"><label class="form-label">Unit Cost (₹) *</label><input type="number" class="form-control" id="in_unit" min="0" step="0.01" oninput="calcInwardTotal()"></div>
         <div class="form-group"><label class="form-label">Total Cost (₹)</label><input type="number" class="form-control" id="in_total" readonly style="background:rgba(0,201,167,0.05)"></div>
@@ -2222,14 +2427,20 @@ function jsonResponse(obj) {
         <div class="form-group"><label class="form-label">Time</label><input type="text" class="form-control" id="out_time" placeholder="08:42 pm" maxlength="8"></div>
         <div class="form-group"><label class="form-label">Invoice / Challan No</label><input class="form-control" id="out_invoice" placeholder="INV-001"></div>
         <div class="form-group"><label class="form-label">Type of Product</label>
-          <select class="form-control" id="out_type">
+          <select class="form-control" id="out_type" onchange="acClearAndHint('out_product','out_product_dd','out_type')">
             <option value="">Select type</option>
             <option>Hearing Aid</option><option>Accessories</option>
-            <option>Battery</option><option>Ear Mould</option><option>Other</option>
+            <option>Receiver</option><option>Ear Mould</option><option>Others</option>
           </select>
         </div>
         <div class="form-group"><label class="form-label">Supplier / Party *</label><input class="form-control" id="out_supplier" placeholder="Party name"></div>
-        <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="out_product" placeholder="Product name"></div>
+        <div class="form-group"><label class="form-label">Brand Name</label><input class="form-control" id="out_brand" placeholder="e.g. Phonak, Signia, Oticon"></div>
+        <div class="form-group"><label class="form-label">Product Name *</label>
+          <div class="autocomplete-wrap">
+            <input class="form-control" id="out_product" placeholder="Select a type first, then search…" autocomplete="off" oninput="acInput(this,'out_product_dd','out_product','out_type')" onkeydown="acKeyNav(event,'out_product_dd','out_product')" onfocus="acInput(this,'out_product_dd','out_product','out_type')">
+            <div class="autocomplete-dropdown" id="out_product_dd"></div>
+          </div>
+        </div>
         <div class="form-group"><label class="form-label">Qty *</label><input type="number" class="form-control" id="out_qty" min="1" oninput="calcOutwardTotal()"></div>
         <div class="form-group"><label class="form-label">Unit Cost (₹)</label><input type="number" class="form-control" id="out_unit" min="0" step="0.01" oninput="calcOutwardTotal()"></div>
         <div class="form-group"><label class="form-label">Total Cost (₹)</label><input type="number" class="form-control" id="out_total" readonly style="background:rgba(0,201,167,0.05)"></div>
@@ -2381,7 +2592,12 @@ function jsonResponse(obj) {
         <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="ws_date"></div>
         <div class="form-group"><label class="form-label">Dealer Name *</label><input class="form-control" id="ws_dealer" placeholder="Dealer name"></div>
         <div class="form-group"><label class="form-label">Contact Person</label><input class="form-control" id="ws_contact" placeholder="Contact person"></div>
-        <div class="form-group"><label class="form-label">Product</label><input class="form-control" id="ws_product" placeholder="Product name"></div>
+        <div class="form-group"><label class="form-label">Product</label>
+          <div class="autocomplete-wrap">
+            <input class="form-control" id="ws_product" placeholder="Type to search product..." autocomplete="off" oninput="acInput(this,'ws_product_dd','ws_product')" onkeydown="acKeyNav(event,'ws_product_dd','ws_product')" onfocus="acInput(this,'ws_product_dd','ws_product')">
+            <div class="autocomplete-dropdown" id="ws_product_dd"></div>
+          </div>
+        </div>
         <div class="form-group full"><label class="form-label">Accessories / Receiver Details</label><textarea class="form-control" id="ws_accessories" rows="2"></textarea></div>
         <div class="form-group"><label class="form-label">Brand Name</label><input class="form-control" id="ws_brand" placeholder="Brand"></div>
         <div class="form-group"><label class="form-label">Qty</label><input type="number" class="form-control" id="ws_qty" min="1" oninput="calcWSTotal()"></div>
@@ -2413,7 +2629,13 @@ function jsonResponse(obj) {
         <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="po_date"></div>
         <div class="form-group"><label class="form-label">Supplier Name *</label><input class="form-control" id="po_supplier" placeholder="Supplier name"></div>
         <div class="form-group"><label class="form-label">Contact Person</label><input class="form-control" id="po_contact" placeholder="Contact person"></div>
-        <div class="form-group full"><label class="form-label">Product Description *</label><textarea class="form-control" id="po_product" rows="2" placeholder="Product description"></textarea></div>
+        <div class="form-group full"><label class="form-label">Product Description *</label>
+          <div class="autocomplete-wrap">
+            <input class="form-control" id="po_product" placeholder="Type to search product..." autocomplete="off" oninput="acInput(this,'po_product_dd','po_product')" onkeydown="acKeyNav(event,'po_product_dd','po_product')" onfocus="acInput(this,'po_product_dd','po_product')">
+            <div class="autocomplete-dropdown" id="po_product_dd"></div>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Brand Name</label><input class="form-control" id="po_brand" placeholder="e.g. Phonak, Signia, Oticon"></div>
         <div class="form-group"><label class="form-label">Qty</label><input type="number" class="form-control" id="po_qty" min="1" oninput="calcPOTotal()"></div>
         <div class="form-group"><label class="form-label">Unit Price (₹)</label><input type="number" class="form-control" id="po_unit" min="0" oninput="calcPOTotal()"></div>
         <div class="form-group"><label class="form-label">Total Value (₹)</label><input type="number" class="form-control" id="po_total" readonly style="background:rgba(0,201,167,0.05)"></div>
@@ -2437,6 +2659,7 @@ function jsonResponse(obj) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Supplier Name *</label><input class="form-control" id="sup_name" placeholder="Supplier name"></div>
+        <div class="form-group"><label class="form-label">Brand Name</label><input class="form-control" id="sup_brand" placeholder="Brand(s) supplied e.g. Phonak, Signia"></div>
         <div class="form-group"><label class="form-label">Contact Person</label><input class="form-control" id="sup_contact" placeholder="Contact person"></div>
         <div class="form-group"><label class="form-label">Phone *</label><input class="form-control" id="sup_phone" placeholder="Phone number"></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="sup_email" placeholder="Email address"></div>
@@ -2558,6 +2781,7 @@ const demoData = {
   suppliers: [],
   stock: [],
   stockMovement: [],
+  productMaster: [],          // ← Product Master (seeded on first run)
   users: [
     { 'SL.NO':1,'FullName':'Admin User','UserID':'admin','Password':'admin123','Role':'Admin','Email':'admin@clearsound.in','Phone':'9999999999','Status':'Active','LastLogin':'' },
   ],
@@ -3037,9 +3261,9 @@ function demoApiCall(params) {
     d['SL.NO'] = demoData.inward.length + 1;
     demoData.inward.push(d);
     const prod = demoData.stock.find(s => s.ProductName === d.ProductName);
-    if (prod) { prod.CurrentStock = (parseInt(prod.CurrentStock)||0) + (parseInt(d.Qty)||0); prod.TotalInward = (parseInt(prod.TotalInward)||0) + (parseInt(d.Qty)||0); prod.LastUpdated = fmtDate(); }
-    else demoData.stock.push({ 'SL.NO': demoData.stock.length+1, ProductName:d.ProductName, ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: fmtDate() });
-    demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'IN', Product:d.ProductName, Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo });
+    if (prod) { prod.CurrentStock = (parseInt(prod.CurrentStock)||0) + (parseInt(d.Qty)||0); prod.TotalInward = (parseInt(prod.TotalInward)||0) + (parseInt(d.Qty)||0); prod.LastUpdated = fmtDate(); if (d.BrandName && !prod.BrandName) prod.BrandName = d.BrandName; }
+    else demoData.stock.push({ 'SL.NO': demoData.stock.length+1, ProductName:d.ProductName, BrandName:d.BrandName||'', ProductType:d.TypeOfProduct, Supplier:d.SupplierName, CurrentStock:parseInt(d.Qty)||0, TotalInward:parseInt(d.Qty)||0, TotalOutward:0, LowStockAlert:5, LastUpdated: fmtDate() });
+    demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'IN', Product:d.ProductName, Brand:d.BrandName||'', Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo });
     saveDb(demoData);
     return { success:true };
   }
@@ -3051,7 +3275,7 @@ function demoApiCall(params) {
     d['SL.NO'] = demoData.outward.length + 1;
     demoData.outward.push(d);
     if (prod) { prod.CurrentStock = (parseInt(prod.CurrentStock)||0) - qty; prod.TotalOutward = (parseInt(prod.TotalOutward)||0) + qty; prod.LastUpdated = fmtDate(); }
-    demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo });
+    demoData.stockMovement.push({ 'SL.NO': demoData.stockMovement.length+1, Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Brand:d.BrandName||'', Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo });
     saveDb(demoData);
     return { success:true };
   }
@@ -3163,7 +3387,8 @@ function recalcStock() {
   demoData.inward.forEach(d => {
     const name = d.ProductName;
     if (!name) return;
-    if (!stockMap[name]) stockMap[name] = { ProductName:name, ProductType:d.TypeOfProduct||'', Supplier:d.SupplierName||'', CurrentStock:0, TotalInward:0, TotalOutward:0, LowStockAlert:5, LastUpdated:d.Date||'' };
+    if (!stockMap[name]) stockMap[name] = { ProductName:name, BrandName:d.BrandName||'', ProductType:d.TypeOfProduct||'', Supplier:d.SupplierName||'', CurrentStock:0, TotalInward:0, TotalOutward:0, LowStockAlert:5, LastUpdated:d.Date||'' };
+    if (d.BrandName && !stockMap[name].BrandName) stockMap[name].BrandName = d.BrandName;
     stockMap[name].TotalInward  += parseInt(d.Qty)||0;
     stockMap[name].CurrentStock += parseInt(d.Qty)||0;
     if (d.Date > stockMap[name].LastUpdated) stockMap[name].LastUpdated = d.Date;
@@ -3183,8 +3408,8 @@ function recalcStock() {
   demoData.stock = Object.values(stockMap).map((s, i) => ({ 'SL.NO': i+1, ...s }));
   // Rebuild stockMovement from inward+outward in date order
   const movements = [
-    ...demoData.inward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'IN',  Product:d.ProductName, Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo })),
-    ...demoData.outward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo }))
+    ...demoData.inward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'IN',  Product:d.ProductName, Brand:d.BrandName||'', Qty:d.Qty, Party:d.SupplierName, Reference:d.InvoiceNo })),
+    ...demoData.outward.map(d => ({ Date:d.Date, Time:d.Time||'', Type:'OUT', Product:d.ProductName, Brand:d.BrandName||'', Qty:d.Qty, Party:d.ReceiverName, Reference:d.InvoiceNo }))
   ].sort((a,b) => (a.Date||'').localeCompare(b.Date||'') || (a.Time||'').localeCompare(b.Time||''));
   demoData.stockMovement = movements.map((m, i) => ({ 'SL.NO': i+1, ...m }));
 }
@@ -3422,6 +3647,7 @@ async function loadInward() {
       <td>${r.Date}</td>
       <td class="td-mono">${r.InvoiceNo||'—'}</td>
       <td><strong>${r.ProductName}</strong><br><span style="font-size:11px;color:var(--text-muted)">${r.TypeOfProduct}</span></td>
+      <td>${r.BrandName||'—'}</td>
       <td>${r.SupplierName}</td>
       <td><strong>${r.Qty}</strong></td>
       <td>${formatCurrency(r.UnitCost)}</td>
@@ -3431,7 +3657,7 @@ async function loadInward() {
         ${actionBtns(`editInward(${r['SL.NO']})`, `deleteInward(${r['SL.NO']})`)}
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No inward entries</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i><p>No inward entries</p></div></td></tr>';
 }
 
 function calcInwardTotal() {
@@ -3441,11 +3667,16 @@ function calcInwardTotal() {
 }
 
 function resetInwardForm() {
-  ['in_date','in_time','in_invoice','in_type','in_supplier','in_product','in_qty','in_unit','in_total','in_through','in_awb','in_receivedby','in_status','in_serial','in_accessories','in_remarks']
+  ['in_date','in_time','in_invoice','in_type','in_supplier','in_brand','in_product','in_qty','in_unit','in_total','in_through','in_awb','in_receivedby','in_status','in_serial','in_accessories','in_remarks']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('in_date').value = todayISO();
   document.getElementById('in_time').value = nowTime();
   document.getElementById('in_status').value = 'Received';
+  // Reset autocomplete
+  const dd = document.getElementById('in_product_dd');
+  if (dd) { dd.classList.remove('open'); dd.innerHTML = ''; }
+  const inp = document.getElementById('in_product');
+  if (inp) inp.placeholder = 'Select a type first, then search…';
 }
 
 function openInwardModal() {
@@ -3466,6 +3697,7 @@ function editInward(slNo) {
   document.getElementById('in_invoice').value      = r.InvoiceNo||'';
   document.getElementById('in_type').value         = r.TypeOfProduct||'';
   document.getElementById('in_supplier').value     = r.SupplierName||'';
+  document.getElementById('in_brand').value        = r.BrandName||'';
   document.getElementById('in_product').value      = r.ProductName||'';
   document.getElementById('in_qty').value          = r.Qty||'';
   document.getElementById('in_unit').value         = r.UnitCost||'';
@@ -3493,6 +3725,7 @@ async function submitInward() {
     InvoiceNo: document.getElementById('in_invoice').value,
     TypeOfProduct: document.getElementById('in_type').value,
     SupplierName: supplier, ProductName: product,
+    BrandName: document.getElementById('in_brand').value,
     Qty: parseInt(qty), SerialNumbers: document.getElementById('in_serial').value,
     AccessoriesDetails: document.getElementById('in_accessories').value,
     UnitCost: parseFloat(document.getElementById('in_unit').value)||0,
@@ -3544,6 +3777,7 @@ async function loadOutward() {
       <td>${r.Date}</td>
       <td class="td-mono">${r.InvoiceNo||'—'}</td>
       <td><strong>${r.ProductName}</strong></td>
+      <td>${r.BrandName||'—'}</td>
       <td>${r.ReceiverName||r.AWBNoMobileNo||'—'}</td>
       <td><strong>${r.Qty}</strong></td>
       <td>${formatCurrency(r.UnitCost)}</td>
@@ -3553,13 +3787,32 @@ async function loadOutward() {
         ${actionBtns(`editOutward(${r['SL.NO']})`, `deleteOutward(${r['SL.NO']})`)}
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No outward entries</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i><p>No outward entries</p></div></td></tr>';
 }
 
 function calcOutwardTotal() {
   const qty  = parseFloat(document.getElementById('out_qty').value)||0;
   const unit = parseFloat(document.getElementById('out_unit').value)||0;
   document.getElementById('out_total').value = (qty * unit).toFixed(2);
+}
+
+function resetOutwardForm() {
+  ['out_date','out_time','out_invoice','out_type','out_supplier','out_brand','out_product','out_qty','out_unit','out_total','out_serial','out_receiver','out_awb','out_status','out_deliverydate','out_accessories']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('out_date').value   = todayISO();
+  document.getElementById('out_time').value   = nowTime();
+  document.getElementById('out_status').value = 'Dispatched';
+  const dd = document.getElementById('out_product_dd');
+  if (dd) { dd.classList.remove('open'); dd.innerHTML = ''; }
+  const inp = document.getElementById('out_product');
+  if (inp) inp.placeholder = 'Select a type first, then search…';
+}
+
+function openOutwardModal() {
+  editingId = null;
+  document.getElementById('outwardModalTitle').textContent = 'Add Outward Entry';
+  resetOutwardForm();
+  openModal('outwardModal');
 }
 
 function editOutward(slNo) {
@@ -3573,6 +3826,7 @@ function editOutward(slNo) {
   document.getElementById('out_invoice').value  = r.InvoiceNo||'';
   document.getElementById('out_type').value     = r.TypeOfProduct||'';
   document.getElementById('out_supplier').value = r.SupplierName||'';
+  document.getElementById('out_brand').value    = r.BrandName||'';
   document.getElementById('out_product').value  = r.ProductName||'';
   document.getElementById('out_qty').value      = r.Qty||'';
   document.getElementById('out_unit').value     = r.UnitCost||'';
@@ -3599,6 +3853,7 @@ async function submitOutward() {
     InvoiceNo: document.getElementById('out_invoice').value,
     TypeOfProduct: document.getElementById('out_type').value,
     SupplierName: supplier, ProductName: product,
+    BrandName: document.getElementById('out_brand').value,
     Qty: parseInt(qty), SerialNo: document.getElementById('out_serial').value,
     AccessoriesDetails: document.getElementById('out_accessories').value,
     UnitCost: parseFloat(document.getElementById('out_unit').value)||0,
@@ -3661,6 +3916,7 @@ async function loadStock() {
       <tr>
         <td class="td-mono">${i+1}</td>
         <td><strong>${r.ProductName||'—'}</strong></td>
+        <td>${r.BrandName||'—'}</td>
         <td>${r.ProductType||'—'}</td>
         <td>${r.Supplier||'—'}</td>
         <td class="${lowClass}" style="font-size:15px;font-family:'DM Mono',monospace;font-weight:700">${current} ${current <= alertLvl ? '⚠️' : ''}</td>
@@ -3673,7 +3929,7 @@ async function loadStock() {
         </td>
       </tr>
     `;
-  }).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-boxes"></i><p>No stock data. Add items via Inward.</p></div></td></tr>';
+  }).join('') : '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-boxes"></i><p>No stock data. Add items via Inward.</p></div></td></tr>';
 }
 
 function openStockAlertModal(productName) {
@@ -3713,11 +3969,12 @@ async function loadStockMovement() {
       <td class="td-mono">${r.Time||'—'}</td>
       <td><span class="badge ${r.Type==='IN'?'badge-success':'badge-danger'}">${r.Type||'—'}</span></td>
       <td><strong>${r.Product||'—'}</strong></td>
+      <td>${r.Brand||'—'}</td>
       <td class="td-mono" style="font-weight:700">${r.Qty||0}</td>
       <td>${r.Party||'—'}</td>
       <td class="td-mono">${r.Reference||'—'}</td>
     </tr>
-  `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exchange-alt"></i><p>No stock movements yet. Add Inward / Outward entries to see movement log.</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-exchange-alt"></i><p>No stock movements yet. Add Inward / Outward entries to see movement log.</p></div></td></tr>';
 }
 
 // ── REPAIRS ───────────────────────────────────────────────────
@@ -4116,6 +4373,7 @@ async function loadPurchaseOrders() {
       <td>${r.DateOfPurchase}</td>
       <td><strong>${r.SupplierName}</strong></td>
       <td>${r.ProductDescription||'—'}</td>
+      <td>${r.BrandName||'—'}</td>
       <td>${r.Qty}</td>
       <td>${formatCurrency(r.UnitPrice)}</td>
       <td><strong>${formatCurrency(r.TotalValue)}</strong></td>
@@ -4125,7 +4383,7 @@ async function loadPurchaseOrders() {
         ${canEditDelete() ? `<button class="btn-icon del" onclick="deletePurchaseOrder(${r['SL.NO']})" title="Delete"><i class="fas fa-trash"></i></button>` : `<span class="role-locked" title="Only Admin or Manager can delete"><i class="fas fa-lock"></i></span>`}
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-file-invoice"></i><p>No purchase orders</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-file-invoice"></i><p>No purchase orders</p></div></td></tr>';
 }
 
 function calcPOTotal() {
@@ -4144,6 +4402,7 @@ async function submitPurchaseOrder() {
     DateOfPurchase: fmtDate(date),
     SupplierName: supplier,
     ContactPerson: document.getElementById('po_contact').value,
+    BrandName: document.getElementById('po_brand').value,
     ProductDescription: product,
     Qty: parseInt(document.getElementById('po_qty').value)||1,
     UnitPrice: parseFloat(document.getElementById('po_unit').value)||0,
@@ -4224,6 +4483,7 @@ async function loadSuppliers() {
     <tr>
       <td class="td-mono">${r['SL.NO']}</td>
       <td><strong>${r.SupplierName}</strong></td>
+      <td>${r.BrandName||'—'}</td>
       <td>${r.ContactPerson||'—'}</td>
       <td class="td-mono">${r.Phone||'—'}</td>
       <td>${r.Email||'—'}</td>
@@ -4233,7 +4493,7 @@ async function loadSuppliers() {
         ${actionBtns(`editSupplier(${r['SL.NO']})`, `deleteSupplier(${r['SL.NO']})`)}
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-industry"></i><p>No suppliers added</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-industry"></i><p>No suppliers added</p></div></td></tr>';
 }
 
 function editSupplier(slNo) {
@@ -4242,6 +4502,7 @@ function editSupplier(slNo) {
   if (!r) return;
   editingId = slNo;
   document.getElementById('sup_name').value    = r.SupplierName||'';
+  document.getElementById('sup_brand').value   = r.BrandName||'';
   document.getElementById('sup_contact').value = r.ContactPerson||'';
   document.getElementById('sup_phone').value   = r.Phone||'';
   document.getElementById('sup_email').value   = r.Email||'';
@@ -4257,6 +4518,7 @@ async function submitSupplier() {
 
   const data = {
     SupplierName: name,
+    BrandName: document.getElementById('sup_brand').value,
     ContactPerson: document.getElementById('sup_contact').value,
     Phone: phone,
     Email: document.getElementById('sup_email').value,
@@ -4824,6 +5086,43 @@ document.addEventListener('keydown', e => {
     // Only persist if we actually migrated something (don't overwrite real DB with empty defaults)
     if (didMigrate) saveDb(demoData);
 
+    // Seed Product Master on first run if empty
+    if (!demoData.productMaster || demoData.productMaster.length === 0) {
+      demoData.productMaster = [
+        { id: pm_uid(), name: 'Phonak Audeo Lumity', brand: 'Phonak', category: 'Hearing Aid', description: 'RIC hearing aid' },
+        { id: pm_uid(), name: 'Signia Pure Charge&Go AX', brand: 'Signia', category: 'Hearing Aid', description: 'Rechargeable hearing aid' },
+        { id: pm_uid(), name: 'Oticon More', brand: 'Oticon', category: 'Hearing Aid', description: 'BTE hearing aid' },
+        { id: pm_uid(), name: 'Widex Moment', brand: 'Widex', category: 'Hearing Aid', description: 'ITE hearing aid' },
+        { id: pm_uid(), name: 'ReSound OMNIA', brand: 'ReSound', category: 'Hearing Aid', description: 'Premium hearing aid' },
+        { id: pm_uid(), name: 'Thin Tube', brand: '', category: 'Accessories', description: 'Tubing for BTE aids' },
+        { id: pm_uid(), name: 'Dome (Open)', brand: '', category: 'Accessories', description: 'Open dome tip' },
+        { id: pm_uid(), name: 'Dome (Closed)', brand: '', category: 'Accessories', description: 'Closed dome tip' },
+        { id: pm_uid(), name: 'Wax Guard', brand: '', category: 'Accessories', description: 'Cerumen filter' },
+        { id: pm_uid(), name: 'Drying Kit', brand: '', category: 'Accessories', description: 'Electronic drying system' },
+        { id: pm_uid(), name: 'Cleaning Kit', brand: '', category: 'Accessories', description: 'Brush and tool kit' },
+        { id: pm_uid(), name: 'Standard Receiver (M)', brand: '', category: 'Receiver', description: 'Medium power receiver' },
+        { id: pm_uid(), name: 'Standard Receiver (P)', brand: '', category: 'Receiver', description: 'Power receiver' },
+        { id: pm_uid(), name: 'Standard Receiver (HP)', brand: '', category: 'Receiver', description: 'High power receiver' },
+        { id: pm_uid(), name: 'Custom Ear Mould (Soft)', brand: '', category: 'Ear Mould', description: 'Soft silicone ear mould' },
+        { id: pm_uid(), name: 'Custom Ear Mould (Hard)', brand: '', category: 'Ear Mould', description: 'Hard acrylic ear mould' },
+        { id: pm_uid(), name: 'Half Shell Mould', brand: '', category: 'Ear Mould', description: 'Half shell custom mould' },
+        { id: pm_uid(), name: 'Canal Mould', brand: '', category: 'Ear Mould', description: 'ITC custom mould' },
+        { id: pm_uid(), name: 'FM System', brand: '', category: 'Others', description: 'Wireless FM accessory' },
+        { id: pm_uid(), name: 'CROS Transmitter', brand: '', category: 'Others', description: 'CROS/BiCROS device' },
+      ];
+      saveDb(demoData);
+    }
+
+    // Load product settings (allowCustomEntry)
+    const savedPSettings = localStorage.getItem('clearsound_product_settings');
+    if (savedPSettings) {
+      try {
+        const ps = JSON.parse(savedPSettings);
+        const el = document.getElementById('allowCustomEntry');
+        if (el) el.checked = !!ps.allowCustomEntry;
+      } catch(e) {}
+    }
+
     // AUTO-SEED LIVE API — real-time sync is always on
     saveGsConfigStore({ url: DEFAULT_GS_URL, connected: true });
     localStorage.setItem('clearsound_gs_autosync', 'true');
@@ -4858,6 +5157,341 @@ document.addEventListener('keydown', e => {
 
 document.getElementById('in_date').value = todayISO();
 document.getElementById('in_time').value = nowTime();
+
+// ════════════════════════════════════════════════════════════
+//  PRODUCT MASTER — CRUD
+// ════════════════════════════════════════════════════════════
+
+function pm_uid() {
+  return 'pm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+let _pmEditId = null;
+
+function openAddProductModal(prefillName) {
+  _pmEditId = null;
+  document.getElementById('pmModalTitle').textContent = 'Add Product';
+  document.getElementById('pm_name').value = prefillName || '';
+  document.getElementById('pm_brand').value = '';
+  document.getElementById('pm_category').value = '';
+  document.getElementById('pm_description').value = '';
+  openModal('productMasterModal');
+}
+
+function editProductMaster(id) {
+  const p = demoData.productMaster.find(x => x.id === id);
+  if (!p) return;
+  _pmEditId = id;
+  document.getElementById('pmModalTitle').textContent = 'Edit Product';
+  document.getElementById('pm_name').value = p.name;
+  document.getElementById('pm_brand').value = p.brand || '';
+  document.getElementById('pm_category').value = p.category;
+  document.getElementById('pm_description').value = p.description || '';
+  openModal('productMasterModal');
+}
+
+function saveProductMaster() {
+  const name     = document.getElementById('pm_name').value.trim();
+  const brand    = document.getElementById('pm_brand').value.trim();
+  const category = document.getElementById('pm_category').value;
+  const desc     = document.getElementById('pm_description').value.trim();
+
+  if (!name)     { toast('Product name is required', 'error'); return; }
+  if (!category) { toast('Please select a category', 'error'); return; }
+
+  // Duplicate check
+  const dup = demoData.productMaster.find(p =>
+    p.name.toLowerCase() === name.toLowerCase() && p.id !== _pmEditId
+  );
+  if (dup) { toast('A product with this name already exists', 'error'); return; }
+
+  if (_pmEditId) {
+    const p = demoData.productMaster.find(x => x.id === _pmEditId);
+    if (p) { p.name = name; p.brand = brand; p.category = category; p.description = desc; }
+  } else {
+    demoData.productMaster.push({ id: pm_uid(), name, brand, category, description: desc });
+  }
+
+  saveDb(demoData);
+  closeModal('productMasterModal');
+  renderProductMasterTable();
+  toast(_pmEditId ? 'Product updated' : 'Product added to master', 'success');
+}
+
+function deleteProductMaster(id) {
+  if (!confirm('Delete this product from the master list?')) return;
+  demoData.productMaster = demoData.productMaster.filter(p => p.id !== id);
+  saveDb(demoData);
+  renderProductMasterTable();
+  toast('Product deleted', 'warning');
+}
+
+function renderProductMasterTable() {
+  if (!document.getElementById('productMasterBody')) return;
+
+  const search   = (document.getElementById('pmSearch')?.value || '').toLowerCase();
+  const catFilter = document.getElementById('pmCategoryFilter')?.value || '';
+  const isAdmin  = currentUser && currentUser.role === 'Admin';
+
+  let list = demoData.productMaster || [];
+  if (search)    list = list.filter(p => p.name.toLowerCase().includes(search) || (p.brand||'').toLowerCase().includes(search) || (p.description||'').toLowerCase().includes(search));
+  if (catFilter) list = list.filter(p => p.category === catFilter);
+
+  // Category summary
+  const catCounts = {};
+  (demoData.productMaster || []).forEach(p => { catCounts[p.category] = (catCounts[p.category]||0)+1; });
+  const cats = ['Hearing Aid','Accessories','Receiver','Ear Mould','Others'];
+  document.getElementById('pmCategorySummary').innerHTML = cats.map(c => {
+    const key = c.replace(/\s+/g, '-');
+    return `<span class="pm-cat-badge pm-cat-${key}" style="gap:6px">
+      <i class="fas fa-tag" style="font-size:10px"></i> ${c} <strong>${catCounts[c]||0}</strong>
+    </span>`;
+  }).join('');
+
+  const tbody = document.getElementById('productMasterBody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products found</p></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((p, i) => {
+    const key = p.category.replace(/\s+/g, '-');
+    const editBtn  = isAdmin ? `<button class="btn-icon edit" onclick="editProductMaster('${p.id}')" title="Edit"><i class="fas fa-edit"></i></button>` : '';
+    const delBtn   = isAdmin ? `<button class="btn-icon del"  onclick="deleteProductMaster('${p.id}')" title="Delete"><i class="fas fa-trash"></i></button>` : '';
+    return `<tr>
+      <td class="td-mono">${i+1}</td>
+      <td><strong>${p.name}</strong></td>
+      <td style="color:var(--teal);font-weight:600;font-size:12px">${p.brand||'—'}</td>
+      <td><span class="pm-cat-badge pm-cat-${key}">${p.category}</span></td>
+      <td style="color:var(--text-muted);font-size:12px">${p.description||'—'}</td>
+      <td>${editBtn}${delBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function saveProductSettings() {
+  const allow = document.getElementById('allowCustomEntry')?.checked || false;
+  localStorage.setItem('clearsound_product_settings', JSON.stringify({ allowCustomEntry: allow }));
+  toast(allow ? 'Custom entry enabled' : 'Custom entry disabled — only master products allowed', allow ? 'success' : 'warning');
+}
+
+function isCustomEntryAllowed() {
+  try {
+    const ps = JSON.parse(localStorage.getItem('clearsound_product_settings') || '{}');
+    return !!ps.allowCustomEntry;
+  } catch(e) { return false; }
+}
+
+// ════════════════════════════════════════════════════════════
+//  AUTOCOMPLETE ENGINE
+// ════════════════════════════════════════════════════════════
+
+// Track currently open dropdown and context
+let _acContext = null; // { inputId, dropdownId, callback }
+
+// acClearAndHint: called when the Type dropdown changes — clears product field and updates placeholder
+function acClearAndHint(productInputId, ddId, typeSelId) {
+  const inp = document.getElementById(productInputId);
+  const dd  = document.getElementById(ddId);
+  const sel = document.getElementById(typeSelId);
+  if (!inp) return;
+  inp.value = '';
+  if (dd) { dd.classList.remove('open'); dd.innerHTML = ''; }
+  const cat = sel ? sel.value : '';
+  inp.placeholder = cat
+    ? `Search ${cat} products…`
+    : 'Select a type first, then search…';
+}
+
+function acInput(inputEl, ddId, inputId, typeSelId) {
+  const dd  = document.getElementById(ddId);
+  const val = inputEl.value.trim();
+  _acContext = { inputId, dropdownId: ddId };
+
+  // Get the category filter from the linked type dropdown (if provided)
+  const typeSel  = typeSelId ? document.getElementById(typeSelId) : null;
+  const catFilter = typeSel ? typeSel.value : '';
+
+  // Build the filtered pool: if a type is selected, show only that category;
+  // otherwise show all products (for wholesale / purchase order fields)
+  let pool = demoData.productMaster || [];
+  if (catFilter) pool = pool.filter(p => p.category === catFilter);
+
+  // If no type selected yet and field is linked to a type selector, show a hint
+  if (typeSelId && !catFilter) {
+    dd.innerHTML = `<div class="ac-no-results" style="color:var(--amber)"><i class="fas fa-exclamation-circle"></i> Please select a <strong>Type of Product</strong> first to filter suggestions.</div>`;
+    dd.classList.add('open');
+    return;
+  }
+
+  if (val.length < 2) {
+    // Show all products in the selected category when focused with no text
+    if (catFilter && pool.length) {
+      const html = pool.slice(0, 12).map(p => {
+        const key = (p.category||'').replace(/\s+/g,'-');
+        const brandBadge = p.brand ? `<span style="font-size:10px;color:var(--teal);font-weight:600;margin-left:4px">${escHtml(p.brand)}</span>` : '';
+        return `<div class="ac-item" data-name="${escHtml(p.name)}" onclick="acSelect('${inputId}','${ddId}','${escHtml(p.name)}')">
+          <span class="ac-item-name">${escHtml(p.name)}${brandBadge}</span>
+          <span class="ac-item-cat pm-cat-badge pm-cat-${key}" style="margin-left:8px">${p.category}</span>
+        </div>`;
+      }).join('');
+      dd.innerHTML = html + `<div style="padding:6px 14px;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border)">${pool.length} ${catFilter} product${pool.length===1?'':'s'} available</div>`;
+      dd.classList.add('open');
+    } else {
+      dd.classList.remove('open');
+      dd.innerHTML = '';
+    }
+    return;
+  }
+
+  const lower   = val.toLowerCase();
+  const matches = pool.filter(p => p.name.toLowerCase().includes(lower));
+
+  let html = '';
+
+  if (matches.length) {
+    html += matches.map(p => {
+      const key = (p.category||'').replace(/\s+/g,'-');
+      const brandBadge = p.brand ? `<span style="font-size:10px;color:var(--teal);font-weight:600;margin-left:4px">${escHtml(p.brand)}</span>` : '';
+      return `<div class="ac-item" data-name="${escHtml(p.name)}" onclick="acSelect('${inputId}','${ddId}','${escHtml(p.name)}')">
+        <span class="ac-item-name">${hlMatch(p.name, val)}${brandBadge}</span>
+        <span class="ac-item-cat pm-cat-badge pm-cat-${key}" style="margin-left:8px">${p.category}</span>
+      </div>`;
+    }).join('');
+  } else {
+    html += `<div class="ac-no-results">No ${catFilter||'products'} match "<strong>${escHtml(val)}</strong>"</div>`;
+  }
+
+  // "Add New Product" option (pre-selects the current category in quick-add modal)
+  html += `<div class="ac-add-new" onclick="acAddNew('${inputId}','${ddId}','${escHtml(val)}','${escHtml(catFilter)}')">
+    <i class="fas fa-plus-circle"></i> Add "<strong>${escHtml(val)}</strong>" as new product
+  </div>`;
+
+  dd.innerHTML  = html;
+  dd.classList.add('open');
+}
+
+function acSelect(inputId, ddId, name) {
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = name;
+  document.getElementById(ddId).classList.remove('open');
+
+  // Sync the type dropdown from the product's category (inward/outward)
+  const prod = (demoData.productMaster||[]).find(p => p.name === name);
+  if (prod) {
+    const typeMap = { in_product:'in_type', out_product:'out_type' };
+    const selId = typeMap[inputId];
+    if (selId) {
+      const sel = document.getElementById(selId);
+      if (sel) {
+        const optVal = [...sel.options].map(o=>o.value).find(v => v===prod.category);
+        if (optVal) sel.value = optVal;
+      }
+    }
+    // Auto-fill brand name field if linked
+    const brandMap = { in_product:'in_brand', out_product:'out_brand', ws_product:'ws_brand', po_product:'po_brand' };
+    const brandId = brandMap[inputId];
+    if (brandId && prod.brand) {
+      const brandEl = document.getElementById(brandId);
+      if (brandEl && !brandEl.value) brandEl.value = prod.brand;
+    }
+  }
+}
+
+function acAddNew(inputId, ddId, prefill, prefillCat) {
+  document.getElementById(ddId).classList.remove('open');
+  if (isCustomEntryAllowed()) {
+    toast('Custom entry accepted', 'success');
+    return;
+  }
+  _acQuickCtx = { inputId, ddId };
+  document.getElementById('qap_name').value = prefill || '';
+  document.getElementById('qap_category').value = prefillCat || '';
+  openModal('quickAddProductModal');
+}
+
+let _acQuickCtx = null;
+
+function saveQuickAddProduct() {
+  const name     = document.getElementById('qap_name').value.trim();
+  const brand    = document.getElementById('qap_brand').value.trim();
+  const category = document.getElementById('qap_category').value;
+  if (!name)     { toast('Product name is required', 'error'); return; }
+  if (!category) { toast('Please select a category', 'error'); return; }
+  const dup = (demoData.productMaster||[]).find(p => p.name.toLowerCase() === name.toLowerCase());
+  if (dup) { toast('Product already exists in master', 'error'); return; }
+
+  demoData.productMaster.push({ id: pm_uid(), name, brand, category, description: '' });
+  saveDb(demoData);
+  toast('Product added to master!', 'success');
+  closeModal('quickAddProductModal');
+
+  if (_acQuickCtx) {
+    acSelect(_acQuickCtx.inputId, _acQuickCtx.dropdownId, name);
+    _acQuickCtx = null;
+  }
+}
+
+function acKeyNav(e, ddId, inputId) {
+  const dd    = document.getElementById(ddId);
+  const items = [...dd.querySelectorAll('.ac-item')];
+  if (!dd.classList.contains('open') || !items.length) return;
+
+  const cur = items.findIndex(i => i.classList.contains('highlighted'));
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    const next = Math.min(cur + 1, items.length - 1);
+    items.forEach(i => i.classList.remove('highlighted'));
+    items[next].classList.add('highlighted');
+    items[next].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const prev = Math.max(cur - 1, 0);
+    items.forEach(i => i.classList.remove('highlighted'));
+    items[prev].classList.add('highlighted');
+    items[prev].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    const hi = items.find(i => i.classList.contains('highlighted'));
+    if (hi) { e.preventDefault(); acSelect(inputId, ddId, hi.dataset.name); }
+  } else if (e.key === 'Escape') {
+    dd.classList.remove('open');
+  }
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.classList.remove('open'));
+  }
+});
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function hlMatch(text, query) {
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) return escHtml(text);
+  return escHtml(text.slice(0, idx)) +
+    '<strong style="color:var(--teal)">' + escHtml(text.slice(idx, idx+query.length)) + '</strong>' +
+    escHtml(text.slice(idx+query.length));
+}
+
+// Hook loadSettings to also render product master table
+const _origLoadSettings = loadSettings;
+async function loadSettings() {
+  await _origLoadSettings.apply(this, arguments);
+  renderProductMasterTable();
+  const savedPSettings = localStorage.getItem('clearsound_product_settings');
+  if (savedPSettings) {
+    try {
+      const ps = JSON.parse(savedPSettings);
+      const el = document.getElementById('allowCustomEntry');
+      if (el) el.checked = !!ps.allowCustomEntry;
+    } catch(e) {}
+  }
+}
 </script>
 </body>
 </html>
