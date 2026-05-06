@@ -1782,7 +1782,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <div style="display:flex;flex-direction:column;gap:16px">
                 <div>
                   <label class="form-label" style="display:block;margin-bottom:6px">Google Apps Script Web App URL *</label>
-                  <input class="form-control" id="gsScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbzVgSPsmsPajtv4BN8c_E0pT-XFjfofaLoMHbaFh92ouy2Zx57jrZfcDqVWYlrimgqb_g/exec" style="font-size:12px">
+                  <input class="form-control" id="gsScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbyFGTNzu4hDyxmaZWaOkGMNCO1wmxppeIgepA3uPBKUbZZ_4DMnWQlV0UfVmf0uiizerw/exec" style="font-size:12px">
                   <p style="font-size:11px;color:var(--text-muted);margin-top:5px">Paste the URL after deploying the Apps Script below as a Web App.</p>
                 </div>
                 <div>
@@ -1830,7 +1830,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 //  ClearSound Hearing Clinic — Google Apps Script (Backend API)
 //  FULLY CORRECTED VERSION
 //
-//  FIXES APPLIED:
+//  CHANGES IN THIS VERSION:
+//  [FIX] 'productMaster' added to SHEET_TABS - now syncs to its own sheet tab
+//  [FIX] pushAll / pullAll automatically include productMaster
+//  [FIX] overwriteTab handles productMaster on every add / edit / delete
+//
+//  ALL PREVIOUS FIXES RETAINED:
 //  1. pullAll     — all Date cells → "DD/MM/YYYY", time cells → "HH:MM am/pm"
 //  2. pushAll     — all columns set to plain-text format (@STRING@) so Google
 //                   Sheets NEVER auto-converts "DD/MM/YYYY" back into a Date
@@ -1844,7 +1849,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 var SHEET_TABS = [
   'inward', 'outward', 'repairs', 'customOrders',
   'wholesale', 'purchaseOrders', 'suppliers',
-  'stock', 'stockMovement', 'users', 'settings'
+  'stock', 'stockMovement', 'users', 'settings', 'productMaster'
 ];
 
 // ─── DATE / TIME HELPERS ────────────────────────────────────────────────────
@@ -2749,7 +2754,7 @@ const DB_KEY = 'clearsound_db_data';
 
 // ── GOOGLE SHEETS CONFIG (defined early so login & autoSync can use it) ──────
 const GS_CONFIG_KEY = 'clearsound_gs_config';
-const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbzVgSPsmsPajtv4BN8c_E0pT-XFjfofaLoMHbaFh92ouy2Zx57jrZfcDqVWYlrimgqb_g/exec';
+const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbyFGTNzu4hDyxmaZWaOkGMNCO1wmxppeIgepA3uPBKUbZZ_4DMnWQlV0UfVmf0uiizerw/exec';
 
 function getGsConfig() {
   try {
@@ -4943,6 +4948,7 @@ async function syncActionToSheets(params) {
     deleteInward:'inward',    deleteOutward:'outward',       deleteRepair:'repairs',
     deleteCustomOrder:'customOrders', deleteWholesale:'wholesale', deletePurchaseOrder:'purchaseOrders',
     deleteSupplier:'suppliers', deleteUser:'users',
+    addProductMaster:'productMaster', updateProductMaster:'productMaster', deleteProductMasterSync:'productMaster',
   };
 
   const { action } = params;
@@ -5016,6 +5022,32 @@ async function syncAllStockToSheets() {
   if (el) el.textContent = now;
   const badge = document.getElementById('liveSyncBadge');
   if (badge) { badge.classList.remove('sync-flash'); void badge.offsetWidth; badge.classList.add('sync-flash'); }
+}
+
+// Push full productMaster table to Google Sheets after any add/edit/delete
+async function syncProductMasterToSheets() {
+  const cfg = getGsConfig();
+  if (!cfg || !cfg.url) return;
+  const data = demoData.productMaster || [];
+  try {
+    const resp = await fetch(cfg.url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'overwriteTab', tab: 'productMaster', data })
+    });
+    const result = await resp.json();
+    if (!result.success) console.warn('[ProductMasterSync] overwriteTab failed:', result.error);
+    else {
+      const now = fmtDateTime();
+      localStorage.setItem('clearsound_gs_lastsync', now);
+      const el = document.getElementById('gsLastSync');
+      if (el) el.textContent = now;
+      const badge = document.getElementById('liveSyncBadge');
+      if (badge) { badge.classList.remove('sync-flash'); void badge.offsetWidth; badge.classList.add('sync-flash'); }
+      console.log('[ProductMasterSync] Synced', data.length, 'products to Sheets');
+    }
+  } catch(e) {
+    console.warn('[ProductMasterSync]', e.message);
+  }
 }
 
 function toggleGuide() {
@@ -5216,6 +5248,7 @@ function saveProductMaster() {
   closeModal('productMasterModal');
   renderProductMasterTable();
   toast(_pmEditId ? 'Product updated' : 'Product added to master', 'success');
+  syncProductMasterToSheets(); // Live sync to Google Sheets
 }
 
 function deleteProductMaster(id) {
@@ -5224,6 +5257,7 @@ function deleteProductMaster(id) {
   saveDb(demoData);
   renderProductMasterTable();
   toast('Product deleted', 'warning');
+  syncProductMasterToSheets(); // Live sync to Google Sheets
 }
 
 function renderProductMasterTable() {
@@ -5424,6 +5458,7 @@ function saveQuickAddProduct() {
   demoData.productMaster.push({ id: pm_uid(), name, brand, category, description: '' });
   saveDb(demoData);
   toast('Product added to master!', 'success');
+  syncProductMasterToSheets(); // Live sync to Google Sheets
   closeModal('quickAddProductModal');
 
   if (_acQuickCtx) {
